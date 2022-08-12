@@ -1,0 +1,11 @@
+fl-repeated-list {
+  display: flex;
+}
+
+fl-repeated-list.vertical {
+  flex-direction: column;
+}
+
+fl-repeated-list.horizontal {
+  flex-direction: row;
+}

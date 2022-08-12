@@ -1,19 +1,15 @@
 <template>
   <div>
-    <h1>Your list-repeater widget will be added here.</h1>
-    <First-Component></First-Component>
+    <p>TODO: options</p>
   </div>
 </template>
 
 <script>
-import FirstComponent from './components/FirstComponent';
+// import state from './state';
 
 export default {
   data() {
     return {};
-  },
-  components: {
-    FirstComponent
   }
 };
 </script>

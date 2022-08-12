@@ -20,9 +20,13 @@
   },
   "build": {
     "dependencies": [
+      "vue.js",
       "fliplet-core"
     ],
-    "assets": []
+    "assets": [
+      "css/build.css",
+      "js/build.js"
+    ]
   },
   "references": [
     "html:richContent"
