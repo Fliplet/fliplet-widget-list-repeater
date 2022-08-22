@@ -1,7 +1,7 @@
-{{{html}}}
+<template style="display:none" name="row">{{{html}}}</template>
 
 <fl-repeated-list data-widget-name="repeated-list" data-repeated-list-id="{{id}}" v-bind:class="[direction]">
-  <row{{id}}
+  <row
     v-for="row in rows"
     v-bind:row="row"
     v-bind:key="row.id"

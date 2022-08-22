@@ -4,7 +4,10 @@ const repeatedListInstances = [];
 
 Fliplet.Widget.instance('repeated-list', function(data, parent) {
   const $rowTemplate = $(this).find('> template[name="row"]');
-  const rowTemplate = $rowTemplate.html();
+
+  const rowTemplate = $rowTemplate.html().replace(/<fl-prop data-path="([^"]+)"/g, (match, key) => {
+    return `<fl-prop v-html="${key}" data-path="${key}"`;
+  });
 
   $rowTemplate.remove();
 
@@ -23,27 +26,16 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
       template: `<fl-repeated-list-row>${rowTemplate}</fl-repeated-list-row>`,
       props: ['row'],
       mounted() {
-        Fliplet.Widget.initializeChildren(this.$el, this);
+        Fliplet.Widget.initializeChildren(this.$el, this, '[data-fl-widget-instance], fl-repeated-list');
       }
     });
 
-    const tpl = `
-<fl-repeated-list data-widget-name="repeated-list" data-repeated-list-id="{{id}}" v-bind:class="[direction]">
-  <row{{id}}
-    v-for="row in rows"
-    v-bind:row="row"
-    v-bind:key="row.id"
-  />
-</fl-repeated-list>
-    `;
-
     // List component
     const vm = new Vue({
-      el: this,
-      template: tpl,
+      el: $(this).find('> fl-repeated-list')[0],
       data,
       components: {
-        [`row${data.id}`]: rowComponent
+        row: rowComponent
       }
     });
 
