@@ -15,7 +15,7 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
     // TODO: what to do in interact mode
 
     _.extend(data, {
-      rows: _.get(parent, 'context', []),
+      rows: parent && parent.context || [],
       parent
     });
 
@@ -39,10 +39,13 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
       }
     });
 
-    console.debug('[REPEATED LIST]', vm);
-
-    // this needs to go in each row
-    // Fliplet.Widget.initializeChildren(this, vm);
+    if (parent && parent.context) {
+      parent.$watch('context', function(context) {
+        if (context !== vm.rows) {
+          vm.rows = context;
+        }
+      });
+    }
 
     resolve(vm);
   });
