@@ -27,6 +27,9 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
       props: ['row'],
       mounted() {
         Fliplet.Widget.initializeChildren(this.$el, this, '[data-fl-widget-instance], fl-repeated-list');
+      },
+      beforeDestroy() {
+        Fliplet.Widget.destroyChildren(this.$el);
       }
     });
 
