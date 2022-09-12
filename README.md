@@ -1,4 +1,4 @@
-# Fliplet Repeated List widget
+# Fliplet List Repeater widget
 
 ## Development
 
