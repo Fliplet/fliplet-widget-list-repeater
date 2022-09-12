@@ -23,10 +23,10 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
 
     // Row component
     const rowComponent = Vue.component(data.rowView, {
-      template: `<fl-repeated-list-row>${rowTemplate}</fl-repeated-list-row>`,
+      template: `<fl-list-repeater-row>${rowTemplate}</fl-list-repeater-row>`,
       props: ['row'],
       mounted() {
-        Fliplet.Widget.initializeChildren(this.$el, this, '[data-fl-widget-instance], fl-repeated-list');
+        Fliplet.Widget.initializeChildren(this.$el, this, '[data-fl-widget-instance], fl-list-repeater');
       },
       beforeDestroy() {
         Fliplet.Widget.destroyChildren(this.$el);
@@ -35,7 +35,7 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
 
     // List component
     const vm = new Vue({
-      el: $(this).find('> fl-repeated-list')[0],
+      el: $(this).find('> fl-list-repeater')[0],
       data,
       components: {
         row: rowComponent

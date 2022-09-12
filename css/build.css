@@ -1,11 +1,11 @@
-fl-repeated-list {
+fl-list-repeater {
   display: flex;
 }
 
-fl-repeated-list.vertical {
+fl-list-repeater.vertical {
   flex-direction: column;
 }
 
-fl-repeated-list.horizontal {
+fl-list-repeater.horizontal {
   flex-direction: row;
 }
