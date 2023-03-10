@@ -1,6 +1,15 @@
 Fliplet.RepeatedList = Fliplet.RepeatedList || {};
 
 const repeatedListInstances = [];
+const isInteract = Fliplet.Env.get('interact');
+
+const sampleData = isInteract
+  ? [
+    { id: 1, data: {} },
+    { id: 2, data: {} },
+    { id: 3, data: {} }
+  ]
+  : undefined;
 
 Fliplet.Widget.instance('repeated-list', function(data, parent) {
   const $rowTemplate = $(this).find('> template[name="row"]');
@@ -12,10 +21,8 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
   $rowTemplate.remove();
 
   const container = new Promise((resolve) => {
-    // TODO: what to do in interact mode
-
     _.extend(data, {
-      rows: parent && parent.context || [],
+      rows: [], /* To re-enable shared state: parent && parent.context || [] */
       parent
     });
 
@@ -23,8 +30,21 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
 
     // Row component
     const rowComponent = Vue.component(data.rowView, {
-      template: `<fl-list-repeater-row>${rowTemplate}</fl-list-repeater-row>`,
-      props: ['row'],
+      template: `<fl-list-repeater-row :class="classes" v-bind="attrs">${rowTemplate}</fl-list-repeater-row>`,
+      props: ['row', 'index'],
+      data() {
+        const isEditableRow = this.index === 0;
+
+        return {
+          classes: {
+            readonly: isInteract && !isEditableRow
+          },
+          attrs: {
+            'data-view': isEditableRow ? 'content' : undefined,
+            'data-node-name': isEditableRow ? 'Content' : undefined
+          }
+        };
+      },
       mounted() {
         Fliplet.Widget.initializeChildren(this.$el, this, '[data-fl-widget-instance], fl-list-repeater');
       },
@@ -42,6 +62,8 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
       }
     });
 
+    /*
+    // Shared state - disabled
     if (parent && parent.context) {
       parent.$watch('context', function(context) {
         if (context !== vm.rows) {
@@ -49,8 +71,40 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
         }
       });
     }
+    */
 
-    resolve(vm);
+    let loadData;
+
+    // Fetch data using the dynamic container connection
+    if (parent && typeof parent.connection === 'function') {
+      loadData = parent.connection().then((connection) => {
+        const cursorData = _.pick(data, ['limit']);
+
+        return Fliplet.Hooks.run('repeaterBeforeRetrieveData', { instance: vm, data: cursorData }).then(() => {
+          return connection.findWithCursor(cursorData).catch(function(error) {
+            Fliplet.Hooks.run('repeaterDataRetrieveError', { instance: vm, error: error });
+          });
+        });
+      });
+    } else if (isInteract) {
+      loadData = Promise.resolve(sampleData);
+    } else {
+      loadData = Promise.resolve();
+    }
+
+    loadData.then((result) => {
+      // Limit results displayed in the UI
+      if (isInteract) {
+        result = _.take(result, sampleData.length);
+      }
+
+      vm.rows = result;
+      resolve(vm);
+
+      Fliplet.Hooks.run('repeaterDataRetrieved', { instance: vm, data: result });
+    }).catch(() => {
+      resolve(vm);
+    });
   });
 
   repeatedListInstances.push(container);
