@@ -47,6 +47,12 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
       },
       mounted() {
         Fliplet.Widget.initializeChildren(this.$el, this, '[data-fl-widget-instance], fl-list-repeater');
+
+        if (isInteract && this.index === 0) {
+          this.$nextTick(() => {
+            Fliplet.Studio.emit('update-dom');
+          });
+        }
       },
       beforeDestroy() {
         Fliplet.Widget.destroyChildren(this.$el);
