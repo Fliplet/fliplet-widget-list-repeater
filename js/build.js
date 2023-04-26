@@ -24,7 +24,8 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
   const container = new Promise((resolve) => {
     _.extend(data, {
       rows: [], /* To re-enable shared state: parent && parent.context || [] */
-      parent
+      parent,
+      cursor: undefined
     });
 
     data.direction = data.direction || 'vertical';
@@ -122,6 +123,8 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
     }
 
     loadData.then((result) => {
+      vm.cursor = result;
+
       // Limit results displayed in the UI
       if (isInteract) {
         result = _.take(result, sampleData.length);
