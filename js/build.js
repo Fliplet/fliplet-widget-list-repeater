@@ -13,8 +13,9 @@ const sampleData = isInteract
 
 Fliplet.Widget.instance('repeated-list', function(data, parent) {
   const $rowTemplate = $(this).find('> template[name="row"]');
+  let compiledRowTemplate;
 
-  const rowTemplate = $rowTemplate.html().replace(/<fl-prop data-path="([^"]+)"/g, (match, key) => {
+  let rowTemplate = ($rowTemplate.html() || '').replace(/<fl-prop data-path="([^"]+)"/g, (match, key) => {
     return `<fl-prop v-html="${key}" data-path="${key}"`;
   });
 
@@ -28,14 +29,20 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
 
     data.direction = data.direction || 'vertical';
 
+    function getTemplateForHtml() {
+      return `<fl-list-repeater-row :data-row-id="key" :key="key" :class="classes" v-bind="attrs">${rowTemplate}</fl-list-repeater-row>`;
+    }
+
+    compiledRowTemplate = Vue.compile(getTemplateForHtml());
+
     // Row component
     const rowComponent = Vue.component(data.rowView, {
-      template: `<fl-list-repeater-row :class="classes" v-bind="attrs">${rowTemplate}</fl-list-repeater-row>`,
       props: ['row', 'index'],
       data() {
         const isEditableRow = this.index === 0;
 
         return {
+          key: this.row && this.row.id || Fliplet.guid(),
           classes: {
             readonly: isInteract && !isEditableRow
           },
@@ -45,12 +52,28 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
           }
         };
       },
+      render(createElement) {
+        return compiledRowTemplate.render.call(this, createElement);
+      },
       mounted() {
         Fliplet.Widget.initializeChildren(this.$el, this, '[data-fl-widget-instance], fl-list-repeater');
 
-        if (isInteract && this.index === 0) {
-          this.$nextTick(() => {
-            Fliplet.Studio.emit('update-dom');
+        if (isInteract) {
+          if (this.index === 0) {
+            this.$nextTick(() => {
+              Fliplet.Studio.emit('update-dom');
+            });
+          }
+
+          Fliplet.Studio.onEvent((event) => {
+            if (event.detail && event.detail.type === 'domUpdated') {
+              if (this.index === 0) {
+                rowTemplate = this.$el.innerHTML;
+                compiledRowTemplate = Vue.compile(getTemplateForHtml());
+              }
+
+              this.$forceUpdate();
+            }
           });
         }
       },

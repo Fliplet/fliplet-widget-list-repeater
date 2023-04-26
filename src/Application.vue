@@ -1,7 +1,7 @@
 <template>
-  <div>
+  <form v-on:submit.prevent="onSubmit">
     <Query-Option></Query-Option>
-  </div>
+  </form>
 </template>
 
 <script>
@@ -15,10 +15,15 @@ export default {
   components: {
     QueryOption
   },
-  mounted() {
-    Fliplet.Widget.onSaveRequest(async() => {
+  methods: {
+    async onSubmit() {
       await Fliplet.Widget.save(state);
       Fliplet.Widget.complete();
+    }
+  },
+  mounted() {
+    Fliplet.Widget.onSaveRequest(async() => {
+      await this.onSubmit();
     });
   }
 };
