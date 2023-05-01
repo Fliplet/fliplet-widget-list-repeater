@@ -123,15 +123,15 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
     }
 
     loadData.then((result) => {
-      vm.cursor = result;
-
       // Limit results displayed in the UI
       if (isInteract) {
-        result = _.take(result, sampleData.length);
+        result.splice(sampleData.length);
       }
 
       vm.rows = result;
       resolve(vm);
+
+      
 
       Fliplet.Hooks.run('repeaterDataRetrieved', { instance: vm, data: result });
     }).catch(() => {
