@@ -1,32 +1,82 @@
 Fliplet.RepeatedList = Fliplet.RepeatedList || {};
 
 const repeatedListInstances = [];
+const isInteract = Fliplet.Env.get('interact');
+
+const sampleData = isInteract
+  ? [
+    { id: 1, data: {} },
+    { id: 2, data: {} },
+    { id: 3, data: {} }
+  ]
+  : undefined;
 
 Fliplet.Widget.instance('repeated-list', function(data, parent) {
   const $rowTemplate = $(this).find('> template[name="row"]');
+  let compiledRowTemplate;
 
-  const rowTemplate = $rowTemplate.html().replace(/<fl-prop data-path="([^"]+)"/g, (match, key) => {
+  let rowTemplate = ($rowTemplate.html() || '').replace(/<fl-prop data-path="([^"]+)"/g, (match, key) => {
     return `<fl-prop v-html="${key}" data-path="${key}"`;
   });
 
   $rowTemplate.remove();
 
   const container = new Promise((resolve) => {
-    // TODO: what to do in interact mode
-
     _.extend(data, {
-      rows: parent && parent.context || [],
-      parent
+      rows: [], /* To re-enable shared state: parent && parent.context || [] */
+      parent,
+      cursor: undefined
     });
 
     data.direction = data.direction || 'vertical';
 
+    function getTemplateForHtml() {
+      return `<fl-list-repeater-row :data-row-id="key" :key="key" :class="classes" v-bind="attrs">${rowTemplate}</fl-list-repeater-row>`;
+    }
+
+    compiledRowTemplate = Vue.compile(getTemplateForHtml());
+
     // Row component
     const rowComponent = Vue.component(data.rowView, {
-      template: `<fl-list-repeater-row>${rowTemplate}</fl-list-repeater-row>`,
-      props: ['row'],
+      props: ['row', 'index'],
+      data() {
+        const isEditableRow = this.index === 0;
+
+        return {
+          key: this.row && this.row.id || Fliplet.guid(),
+          classes: {
+            readonly: isInteract && !isEditableRow
+          },
+          attrs: {
+            'data-view': isEditableRow ? 'content' : undefined,
+            'data-node-name': isEditableRow ? 'Content' : undefined
+          }
+        };
+      },
+      render(createElement) {
+        return compiledRowTemplate.render.call(this, createElement);
+      },
       mounted() {
         Fliplet.Widget.initializeChildren(this.$el, this, '[data-fl-widget-instance], fl-list-repeater');
+
+        if (isInteract) {
+          if (this.index === 0) {
+            this.$nextTick(() => {
+              Fliplet.Studio.emit('update-dom');
+            });
+          }
+
+          Fliplet.Studio.onEvent((event) => {
+            if (event.detail && event.detail.type === 'domUpdated') {
+              if (this.index === 0) {
+                rowTemplate = this.$el.innerHTML;
+                compiledRowTemplate = Vue.compile(getTemplateForHtml());
+              }
+
+              this.$forceUpdate();
+            }
+          });
+        }
       },
       beforeDestroy() {
         Fliplet.Widget.destroyChildren(this.$el);
@@ -42,6 +92,8 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
       }
     });
 
+    /*
+    // Shared state - disabled
     if (parent && parent.context) {
       parent.$watch('context', function(context) {
         if (context !== vm.rows) {
@@ -49,8 +101,42 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
         }
       });
     }
+    */
 
-    resolve(vm);
+    let loadData;
+
+    // Fetch data using the dynamic container connection
+    if (parent && typeof parent.connection === 'function') {
+      loadData = parent.connection().then((connection) => {
+        const cursorData = _.pick(data, ['limit']);
+
+        return Fliplet.Hooks.run('repeaterBeforeRetrieveData', { instance: vm, data: cursorData }).then(() => {
+          return connection.findWithCursor(cursorData).catch(function(error) {
+            Fliplet.Hooks.run('repeaterDataRetrieveError', { instance: vm, error: error });
+          });
+        });
+      });
+    } else if (isInteract) {
+      loadData = Promise.resolve(sampleData);
+    } else {
+      loadData = Promise.resolve();
+    }
+
+    loadData.then((result) => {
+      // Limit results displayed in the UI
+      if (isInteract) {
+        result.splice(sampleData.length);
+      }
+
+      vm.rows = result;
+      resolve(vm);
+
+      
+
+      Fliplet.Hooks.run('repeaterDataRetrieved', { instance: vm, data: result });
+    }).catch(() => {
+      resolve(vm);
+    });
   });
 
   repeatedListInstances.push(container);

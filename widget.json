@@ -7,6 +7,9 @@
   "tags": ["type:component", "category:layout"],
   "provider_only": false,
   "html_tag": "div",
+  "references": [
+    "content:richContent"
+  ],
   "interface": {
     "dependencies": [
       "vue.js",
@@ -27,8 +30,5 @@
       "css/build.css",
       "js/build.js"
     ]
-  },
-  "references": [
-    "html:richContent"
-  ]
+  }
 }

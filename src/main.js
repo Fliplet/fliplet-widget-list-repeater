@@ -1,7 +1,7 @@
 import Application from './Application.vue';
 
 new Vue({
-  el: '#list-repeater',
+  el: '#repeated-list-configuration',
   render: (createElement) => {
     return createElement(Application);
   }
