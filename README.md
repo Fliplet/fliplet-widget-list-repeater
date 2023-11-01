@@ -28,19 +28,19 @@ The following JS APIs are available in a screen once a **Repeater** component is
 
 Since you can have many list repeater components in a screen, we provide a handy function to grab a specific instance by its name or the first one available in the page when no input parameter is given.
 
-### `Fliplet.ListRepeater.get()`
+### `Fliplet.RepeatedList.get()`
 
 Retrieves the first or a specific record container instance.
 
 ```js
 // Get the first repeater instance
-Fliplet.ListRepeater.get()
+Fliplet.RepeatedList.get()
   .then(function (repeater) {
     // Use repeater object to perform various actions
   });
 
 // Get the first repeater instance named 'foo'
-Fliplet.ListRepeater.get('foo')
+Fliplet.RepeatedList.get('foo')
   .then(function (repeater) {
     // Use repeater object to perform various actions
   });
@@ -60,7 +60,7 @@ The `container` instance variable above is a `Vue` compatible instance with the 
 Use the `getAll` method of the namespace to get all instances at once:
 
 ```js
-Fliplet.ListRepeater.getAll().then(function (repeaters) {
+Fliplet.RepeatedList.getAll().then(function (repeaters) {
   // Use repeaters
 });
 ```
@@ -138,7 +138,7 @@ function updatePosition() {
 
 // Function to load the next page of the dataset
 function loadMore() {
-  Fliplet.ListRepeater.get().then(function (repeater) {
+  Fliplet.RepeatedList.get().then(function (repeater) {
     // Move to the next page of the dataset and keep existing entries in the cursor
     repeater.rows.next().update({ keepExisting: true });
   });
@@ -148,7 +148,7 @@ function loadMore() {
 On the other hand, if you're paginating a list (e.g. moving the cursor between pages), you may need to manually refresh the list repeater:
 
 ```js
-Fliplet.ListRepeater.get().then(function (repeater) {
+Fliplet.RepeatedList.get().then(function (repeater) {
   // Move to the next page of the dataset
   repeater.rows.next().update();
 
