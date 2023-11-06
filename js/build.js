@@ -1,4 +1,4 @@
-Fliplet.RepeatedList = Fliplet.RepeatedList || {};
+Fliplet.ListRepeater = Fliplet.ListRepeater || {};
 
 const repeatedListInstances = [];
 const isInteract = Fliplet.Env.get('interact');
@@ -131,7 +131,7 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
       vm.rows = result;
       resolve(vm);
 
-      
+
 
       Fliplet.Hooks.run('repeaterDataRetrieved', { instance: vm, data: result });
     }).catch(() => {
@@ -144,7 +144,7 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
   supportsDynamicContext: true
 });
 
-Fliplet.RepeatedList.get = function(name, options) {
+Fliplet.ListRepeater.get = function(name, options) {
   options = options || { ts: 10 };
 
   return Fliplet().then(function() {
@@ -173,7 +173,7 @@ Fliplet.RepeatedList.get = function(name, options) {
           setTimeout(function() {
             options.ts = options.ts * 1.5;
 
-            Fliplet.RepeatedList.get(name, options).then(resolve);
+            Fliplet.ListRepeater.get(name, options).then(resolve);
           }, options.ts);
         });
       }
@@ -183,7 +183,7 @@ Fliplet.RepeatedList.get = function(name, options) {
   });
 };
 
-Fliplet.RepeatedList.getAll = function(name) {
+Fliplet.ListRepeater.getAll = function(name) {
   return Fliplet().then(function() {
     return Promise.all(repeatedListInstances).then(function(containers) {
       if (typeof name === 'undefined') {
