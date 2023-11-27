@@ -10,7 +10,21 @@ fl-list-repeater.horizontal {
   flex-direction: row;
 }
 
+fl-list-repeater-row[data-view] {
+  border: 1px dashed #ccc;
+}
+
 fl-list-repeater-row.readonly {
+  background-color: rgba(126, 126, 126, 0.2);
   pointer-events: none;
   opacity: 0.5;
+}
+
+fl-list-repeater-row > [data-view-placeholder] {
+  text-align: center;
+  padding: 15px;
+}
+
+fl-list-repeater-row.readonly > [data-view-placeholder] {
+  opacity: 0;
 }

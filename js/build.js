@@ -11,15 +11,20 @@ const sampleData = isInteract
   ]
   : undefined;
 
-Fliplet.Widget.instance('repeated-list', function(data, parent) {
+Fliplet.Widget.instance('list-repeater', function(data, parent) {
   const $rowTemplate = $(this).find('> template[name="row"]');
+  const $emptyTemplate = $(this).find('> template[name="empty"]');
+  const templateViewName = 'content';
+  const templateNodeName = 'Content';
   let compiledRowTemplate;
 
   let rowTemplate = ($rowTemplate.html() || '').replace(/<fl-prop data-path="([^"]+)"/g, (match, key) => {
     return `<fl-prop v-html="${key}" data-path="${key}"`;
-  });
+  }).trim();
+  const emptyTemplate = $emptyTemplate.html();
 
   $rowTemplate.remove();
+  $emptyTemplate.remove();
 
   const container = new Promise((resolve) => {
     _.extend(data, {
@@ -31,7 +36,7 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
     data.direction = data.direction || 'vertical';
 
     function getTemplateForHtml() {
-      return `<fl-list-repeater-row :data-row-id="key" :key="key" :class="classes" v-bind="attrs">${rowTemplate}</fl-list-repeater-row>`;
+      return `<fl-list-repeater-row :data-row-id="key" :key="key" :class="classes" v-bind="attrs">${rowTemplate || emptyTemplate}</fl-list-repeater-row>`;
     }
 
     compiledRowTemplate = Vue.compile(getTemplateForHtml());
@@ -48,36 +53,52 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
             readonly: isInteract && !isEditableRow
           },
           attrs: {
-            'data-view': isEditableRow ? 'content' : undefined,
-            'data-node-name': isEditableRow ? 'Content' : undefined
+            'data-view': isEditableRow ? templateViewName : undefined,
+            'data-node-name': isEditableRow ? templateNodeName : undefined
           }
         };
+      },
+      computed: {
+        isEmpty() {
+          return !rowTemplate;
+        }
       },
       render(createElement) {
         return compiledRowTemplate.render.call(this, createElement);
       },
       mounted() {
-        Fliplet.Widget.initializeChildren(this.$el, this, '[data-fl-widget-instance], fl-list-repeater');
+        Fliplet.Widget.initializeChildren(this.$el, this);
 
-        if (isInteract) {
-          if (this.index === 0) {
-            this.$nextTick(() => {
-              Fliplet.Studio.emit('update-dom');
-            });
-          }
+        if (!isInteract) {
+          return;
+        }
 
-          Fliplet.Studio.onEvent((event) => {
-            if (event.detail && event.detail.type === 'domUpdated') {
+        if (this.index === 0) {
+          this.$nextTick(() => {
+            // Update screen structure in Studio after rendering
+            Fliplet.Studio.emit('update-dom');
+          });
+
+          // @TODO: Add MutationObserver to detect show/hide view placeholder when content is removed/added
+        }
+
+        Fliplet.Studio.onEvent((event) => {
+          const eventType = _.get(event, 'detail.type');
+
+          switch (eventType) {
+            case 'domUpdated':
               if (this.index === 0) {
-                rowTemplate = this.$el.innerHTML;
+                rowTemplate = this.$el.innerHTML.trim();
                 compiledRowTemplate = Vue.compile(getTemplateForHtml());
               }
 
               this.$forceUpdate();
-            }
-          });
-        }
-      },
+              break;
+            default:
+              break;
+          }
+        });
+    },
       beforeDestroy() {
         Fliplet.Widget.destroyChildren(this.$el);
       }
@@ -85,7 +106,7 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
 
     // List component
     const vm = new Vue({
-      el: $(this).find('> fl-list-repeater')[0],
+      el: this,
       data,
       components: {
         row: rowComponent
@@ -111,10 +132,12 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
         const cursorData = _.pick(data, ['limit']);
 
         return Fliplet.Hooks.run('repeaterBeforeRetrieveData', { instance: vm, data: cursorData }).then(() => {
-          return connection.findWithCursor(cursorData).catch(function(error) {
-            Fliplet.Hooks.run('repeaterDataRetrieveError', { instance: vm, error: error });
-          });
+          return connection.findWithCursor(cursorData);
         });
+      }).catch((error) => {
+        Fliplet.Hooks.run('repeaterDataRetrieveError', { instance: vm, error });
+
+        return [];
       });
     } else if (isInteract) {
       loadData = Promise.resolve(sampleData);
@@ -122,16 +145,18 @@ Fliplet.Widget.instance('repeated-list', function(data, parent) {
       loadData = Promise.resolve();
     }
 
-    loadData.then((result) => {
+    loadData.then((result = []) => {
       // Limit results displayed in the UI
       if (isInteract) {
+        if (!result.length) {
+          result = sampleData;
+        }
+
         result.splice(sampleData.length);
       }
 
       vm.rows = result;
       resolve(vm);
-
-
 
       Fliplet.Hooks.run('repeaterDataRetrieved', { instance: vm, data: result });
     }).catch(() => {
