@@ -36,7 +36,7 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
     data.direction = data.direction || 'vertical';
 
     function getTemplateForHtml() {
-      return `<fl-list-repeater-row :data-row-id="key" :key="key" :class="classes" v-bind="attrs">${rowTemplate || emptyTemplate}</fl-list-repeater-row>`;
+      return `<fl-list-repeater-row :data-row-id="key" :key="key" :class="classes" v-bind="attrs" v-on:click="onClick">${rowTemplate || emptyTemplate}</fl-list-repeater-row>`;
     }
 
     compiledRowTemplate = Vue.compile(getTemplateForHtml());
@@ -57,6 +57,31 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
             'data-node-name': isEditableRow ? templateNodeName : undefined
           }
         };
+      },
+      methods: {
+        onClick() {
+          if (!data.clickAction) {
+            return;
+          }
+
+          const clickAction = _.merge({}, data.clickAction);
+
+          // Add data source entry ID to query string
+          if (clickAction.action === 'screen') {
+            // @TODO: Add support for Fliplet.Navigate.queryStringToObject() and Fliplet.Navigate.objectToQueryString()
+            // const query = Fliplet.Navigate.queryStringToObject(clickAction.query || '');
+            // const dataSourceEntryId = _.get(this.row, 'id');
+
+            // if (dataSourceEntryId && !query.dataSourceEntryId) {
+            //   query.dataSourceEntryId = dataSourceEntryId;
+            //   clickAction.query = Fliplet.Navigate.objectToQueryString(query);
+            // }
+            clickAction.query = clickAction.query || '';
+            clickAction.query += `${clickAction.query ? '&' : ''}dataSourceEntryId=${this.row.id}`;
+          }
+
+          Fliplet.Navigate.to(clickAction);
+        }
       },
       computed: {
         isEmpty() {
@@ -98,7 +123,7 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
               break;
           }
         });
-    },
+      },
       beforeDestroy() {
         Fliplet.Widget.destroyChildren(this.$el);
       }
@@ -129,7 +154,9 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
     // Fetch data using the dynamic container connection
     if (parent && typeof parent.connection === 'function') {
       loadData = parent.connection().then((connection) => {
-        const cursorData = _.pick(data, ['limit']);
+        const cursorData = {
+          limit: _.get(data, 'limit', 10)
+        };
 
         return Fliplet.Hooks.run('repeaterBeforeRetrieveData', { instance: vm, data: cursorData }).then(() => {
           return connection.findWithCursor(cursorData);
