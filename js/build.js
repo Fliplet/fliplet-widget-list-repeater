@@ -169,28 +169,26 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
   supportsDynamicContext: true
 });
 
-Fliplet.ListRepeater.get = function(name, options) {
+Fliplet.ListRepeater.get = function(filter, options) {
+  if (typeof filter === 'string') {
+    filter = { name: filter };
+  }
+
   options = options || { ts: 10 };
 
   return Fliplet().then(function() {
     return Promise.all(repeatedListInstances).then(function(containers) {
       var container;
 
-      if (typeof name === 'undefined') {
+      if (typeof filter === 'undefined') {
         container = containers.length ? containers[0] : undefined;
       } else {
-        containers.some(function(vm) {
-          if (vm.name === name) {
-            container = vm;
-
-            return true;
-          }
-        });
+        container = _.find(containers, filter);
       }
 
       if (!container) {
         if (options.ts > 5000) {
-          return Promise.reject('RepeatedList not found after ' + Math.ceil(options.ts / 1000) + ' seconds.');
+          return Promise.reject(`Repeated List instance not found after ${Math.ceil(options.ts / 1000)} seconds.`);
         }
 
         // Containers can render over time, so we need to retry later in the process
@@ -198,7 +196,7 @@ Fliplet.ListRepeater.get = function(name, options) {
           setTimeout(function() {
             options.ts = options.ts * 1.5;
 
-            Fliplet.ListRepeater.get(name, options).then(resolve);
+            Fliplet.ListRepeater.get(filter, options).then(resolve);
           }, options.ts);
         });
       }
@@ -208,16 +206,18 @@ Fliplet.ListRepeater.get = function(name, options) {
   });
 };
 
-Fliplet.ListRepeater.getAll = function(name) {
+Fliplet.ListRepeater.getAll = function(filter) {
+  if (typeof filter === 'string') {
+    filter = { name: filter };
+  }
+
   return Fliplet().then(function() {
     return Promise.all(repeatedListInstances).then(function(containers) {
-      if (typeof name === 'undefined') {
+      if (typeof filter === 'undefined') {
         return containers;
       }
 
-      return containers.filter(function(form) {
-        return form.name === name;
-      });
+      return _.filter(containers, filter);
     });
   });
 };
