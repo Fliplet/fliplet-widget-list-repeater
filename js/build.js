@@ -12,8 +12,8 @@ const sampleData = isInteract
   : undefined;
 
 Fliplet.Widget.instance('list-repeater', function(data, parent) {
-  const $rowTemplate = $(this).find('> template[name="row"]');
-  const $emptyTemplate = $(this).find('> template[name="empty"]');
+  const $rowTemplate = $(this).find('template[name="row"]').eq(0);
+  const $emptyTemplate = $(this).find('template[name="empty"]').eq(0);
   const templateViewName = 'content';
   const templateNodeName = 'Content';
   let compiledRowTemplate;
