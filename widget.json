@@ -1,5 +1,5 @@
 {
-  "name": "List Repeater",
+  "name": "List repeater",
   "package": "com.fliplet.repeater",
   "version": "1.0.0",
   "description": "",
@@ -12,7 +12,6 @@
     "interfaceWidgetPackage": "com.fliplet.helper-configuration"
   },
   "interface": {
-    "dependencies": ["vue.js", "fliplet-core", "fliplet-studio-ui"],
     "assets": ["js/interface.js"]
   },
   "build": {

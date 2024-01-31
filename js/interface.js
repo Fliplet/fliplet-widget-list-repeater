@@ -1,11 +1,16 @@
 Fliplet.Widget.generateInterface({
-  title: 'List Repeater',
   fields: [
     {
       type: 'provider',
       name: 'clickAction',
-      label: 'Click action',
-      package: 'com.fliplet.link'
+      package: 'com.fliplet.link',
+      data: function(value) {
+        return _.assign({}, value, {
+          options: {
+            actionLabel: 'Click action'
+          }
+        });
+      }
     },
     {
       name: 'limit',
