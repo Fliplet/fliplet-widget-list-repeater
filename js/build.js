@@ -11,16 +11,28 @@ const sampleData = isInteract
   ]
   : undefined;
 
+function getHtmlKeyFromPath(path) {
+  return `path${CryptoJS.MD5(path).toString().substr(-6)}`;
+}
+
 Fliplet.Widget.instance('list-repeater', function(data, parent) {
   const $rowTemplate = $(this).find('template[name="row"]').eq(0);
   const $emptyTemplate = $(this).find('template[name="empty"]').eq(0);
   const templateViewName = 'content';
   const templateNodeName = 'Content';
+  const rowTemplatePaths = [];
   let compiledRowTemplate;
 
-  let rowTemplate = ($rowTemplate.html() || '').replace(/<fl-prop data-path="([^"]+)"/g, (match, key) => {
-    return `<fl-prop v-html="${key}" data-path="${key}"`;
-  }).trim();
+  let rowTemplate = $('<div></div>').append($($rowTemplate.html() || '').find('fl-prop[data-path]').each(function(i, el) {
+    const path = el.getAttribute('data-path');
+
+    if (rowTemplatePaths.indexOf(path) === -1) {
+      rowTemplatePaths.push(path);
+    }
+
+    // Set the v-html attribute to a unique alphanumeric key based on the path
+    el.setAttribute('v-html', `data.${ getHtmlKeyFromPath(path) }`);
+  }).end()).html();
   const emptyTemplate = $emptyTemplate.html();
 
   $rowTemplate.remove();
@@ -36,7 +48,17 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
     data.direction = data.direction || 'vertical';
 
     function getTemplateForHtml() {
-      return `<fl-list-repeater-row :data-row-id="key" :key="key" :class="classes" v-bind="attrs" v-on:click="onClick">${rowTemplate || emptyTemplate}</fl-list-repeater-row>`;
+      const rowTag = document.createElement('fl-list-repeater-row');
+
+      rowTag.setAttribute(':data-row-id', 'key');
+      rowTag.setAttribute(':key', 'key');
+      rowTag.setAttribute(':class', 'classes');
+      rowTag.setAttribute('v-bind', 'attrs');
+      rowTag.setAttribute('v-on:click', 'onClick');
+
+      rowTag.innerHTML = rowTemplate || emptyTemplate;
+
+      return rowTag.outerHTML;
     }
 
     compiledRowTemplate = Vue.compile(getTemplateForHtml());
@@ -46,8 +68,7 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
       props: ['row', 'index'],
       data() {
         const isEditableRow = this.index === 0;
-
-        return {
+        const result = {
           key: this.row && this.row.id || Fliplet.guid(),
           classes: {
             readonly: isInteract && !isEditableRow
@@ -55,8 +76,18 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
           attrs: {
             'data-view': isEditableRow ? templateViewName : undefined,
             'data-node-name': isEditableRow ? templateNodeName : undefined
-          }
+          },
+          data: {}
         };
+
+        if (!isInteract) {
+          // Loop through the row template paths and set the data for v-html
+          rowTemplatePaths.forEach((path) => {
+            result.data[getHtmlKeyFromPath(path)] = _.get(this, path);
+          });
+        }
+
+        return result;
       },
       methods: {
         onClick() {

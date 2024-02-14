@@ -6,7 +6,8 @@
     "plugin:vue/essential"
   ],
   "globals": {
-    "Vue": true
+    "Vue": true,
+    "CryptoJS": true
   },
   "rules": {
     "no-new": 0
