@@ -40,7 +40,7 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
 
   const container = new Promise((resolve) => {
     _.extend(data, {
-      rows: [], /* To re-enable shared state: parent && parent.context || [] */
+      rows: undefined,
       parent,
       cursor: undefined
     });
@@ -56,7 +56,7 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
       rowTag.setAttribute('v-bind', 'attrs');
       rowTag.setAttribute('v-on:click', 'onClick');
 
-      rowTag.innerHTML = rowTemplate || emptyTemplate;
+      rowTag.innerHTML = rowTemplate || (isInteract ? emptyTemplate : '');
 
       return rowTag.outerHTML;
     }
@@ -77,6 +77,7 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
             'data-view': isEditableRow ? templateViewName : undefined,
             'data-node-name': isEditableRow ? templateNodeName : undefined
           },
+          rowTemplate,
           data: {}
         };
 
@@ -112,11 +113,6 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
           }
 
           Fliplet.Navigate.to(clickAction);
-        }
-      },
-      computed: {
-        isEmpty() {
-          return !rowTemplate;
         }
       },
       render(createElement) {
@@ -163,27 +159,35 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
     // List component
     const vm = new Vue({
       el: this,
-      data,
+      data() {
+        var result = {
+          isInteract,
+          isLoading: false,
+          error: undefined,
+          noDataTemplate: data.noDataContent ||  T('widgets.listRepeater.noDataContent')
+        };
+
+        return Object.assign(result, data);
+      },
       components: {
         row: rowComponent
+      },
+      filters: {
+        parseError: function(error) {
+          return Fliplet.parseError(error);
+        }
       }
     });
-
-    /*
-    // Shared state - disabled
-    if (parent && parent.context) {
-      parent.$watch('context', function(context) {
-        if (context !== vm.rows) {
-          vm.rows = context;
-        }
-      });
-    }
-    */
 
     let loadData;
 
     // Fetch data using the dynamic container connection
-    if (parent && typeof parent.connection === 'function') {
+    if (isInteract) {
+      loadData = Promise.resolve(sampleData);
+    } else if (parent && typeof parent.connection === 'function') {
+      vm.isLoading = true;
+      vm.error = undefined;
+
       loadData = parent.connection().then((connection) => {
         const cursorData = {
           limit: _.get(data, 'limit', 10)
@@ -197,27 +201,28 @@ Fliplet.Widget.instance('list-repeater', function(data, parent) {
 
         return [];
       });
-    } else if (isInteract) {
-      loadData = Promise.resolve(sampleData);
     } else {
       loadData = Promise.resolve();
     }
 
     loadData.then((result = []) => {
-      // Limit results displayed in the UI
-      if (isInteract) {
-        if (!result.length) {
-          result = sampleData;
-        }
-
-        result.splice(sampleData.length);
-      }
-
+      vm.isLoading = false;
       vm.rows = result;
       resolve(vm);
 
       Fliplet.Hooks.run('repeaterDataRetrieved', { instance: vm, data: result });
-    }).catch(() => {
+    }).catch((error) => {
+      vm.isLoading = false;
+      vm.error = error;
+
+      if (vm.rows) {
+        Fliplet.UI.errorToast(error, 'Error loading data');
+      } else {
+        vm.$nextTick(() => {
+          $(vm.$el).find('.list-repeater-load-error').translate();
+        });
+      }
+
       resolve(vm);
     });
   });

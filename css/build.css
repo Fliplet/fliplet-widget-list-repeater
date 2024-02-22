@@ -10,6 +10,10 @@ fl-list-repeater.horizontal {
   flex-direction: row;
 }
 
+fl-list-repeater .list-repeater-load-error {
+  text-align: center;
+}
+
 .mode-interact fl-list-repeater-row[data-view] {
   border: 1px dashed #ccc;
 }

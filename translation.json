@@ -1,0 +1,10 @@
+{
+  "widgets": {
+    "listRepeater": {
+      "noDataContent": "No data to display",
+      "errors": {
+        "loadingData": "Error loading data"
+      }
+    }
+  }
+}

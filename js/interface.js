@@ -17,6 +17,12 @@ Fliplet.Widget.generateInterface({
       type: 'text',
       label: 'Show number of records / pages',
       placeholder: 'Default: 10'
+    },
+    {
+      name: 'noDataContent',
+      type: 'textarea',
+      label: 'Text to show if no data loaded',
+      placeholder: 'Default: No data to display'
     }
   ]
 });
