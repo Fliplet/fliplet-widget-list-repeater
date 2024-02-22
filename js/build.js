@@ -174,7 +174,7 @@
           row: rowComponent
         },
         filters: {
-          parseError: function(error) {
+          parseError(error) {
             return Fliplet.parseError(error);
           }
         }
