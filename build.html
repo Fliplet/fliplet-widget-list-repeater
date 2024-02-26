@@ -3,8 +3,8 @@
   <template type="text/html" name="empty"><div data-view-placeholder>Drag &amp; drop components here to repeat dynamic data</div></template>
   <!-- Has template -->
   <template v-if="!rows">
-      <!-- Initial loading -->
-      <div v-if="error" class="list-repeater-load-error">
+    <!-- Initial loading -->
+    <div v-if="error" class="list-repeater-load-error">
       <p data-translate="widgets.listRepeater.errors.loadingData"></p>
       <p><small>\{{ error | parseError }}</small></p>
     </div>

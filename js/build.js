@@ -78,7 +78,6 @@
               'data-view': isEditableRow ? templateViewName : undefined,
               'data-node-name': isEditableRow ? templateNodeName : undefined
             },
-            rowTemplate,
             data: {}
           };
 
