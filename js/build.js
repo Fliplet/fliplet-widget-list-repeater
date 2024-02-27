@@ -193,13 +193,9 @@
             limit: _.get(data, 'limit', 10)
           };
 
-          return Fliplet.Hooks.run('repeaterBeforeRetrieveData', { instance: vm, data: cursorData }).then(() => {
+          return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: vm, data: cursorData }).then(() => {
             return connection.findWithCursor(cursorData);
           });
-        }).catch((error) => {
-          Fliplet.Hooks.run('repeaterDataRetrieveError', { instance: vm, error });
-
-          return [];
         });
       } else {
         loadData = Promise.resolve();
@@ -210,18 +206,16 @@
         vm.rows = result;
         resolve(vm);
 
-        Fliplet.Hooks.run('repeaterDataRetrieved', { instance: vm, data: result });
+        Fliplet.Hooks.run('listRepeaterDataRetrieved', { instance: vm, data: result });
       }).catch((error) => {
         vm.isLoading = false;
         vm.error = error;
 
-        if (vm.rows) {
-          Fliplet.UI.errorToast(error, 'Error loading data');
-        } else {
-          vm.$nextTick(() => {
-            $(vm.$el).find('.list-repeater-load-error').translate();
-          });
-        }
+        Fliplet.Hooks.run('listRepeaterDataRetrieveError', { instance: vm, error });
+
+        vm.$nextTick(() => {
+          $(vm.$el).find('.list-repeater-load-error').translate();
+        });
 
         resolve(vm);
       });
