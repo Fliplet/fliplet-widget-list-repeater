@@ -42,8 +42,7 @@
     const container = new Promise((resolve) => {
       _.extend(data, {
         rows: undefined,
-        parent,
-        cursor: undefined
+        parent
       });
 
       data.direction = data.direction || 'vertical';
@@ -121,6 +120,11 @@
         mounted() {
           Fliplet.Widget.initializeChildren(this.$el, this);
 
+          // Observe when the last row is in view
+          if (this.index === this.$parent.rows.length - 1) {
+            this.$parent.lastRowObserver.observe(this.$el);
+          }
+
           if (!isInteract) {
             return;
           }
@@ -164,6 +168,7 @@
             isInteract,
             isLoading: false,
             error: undefined,
+            lastRowObserver: undefined,
             noDataTemplate: data.noDataContent ||  T('widgets.listRepeater.noDataContent')
           };
 
@@ -176,6 +181,33 @@
           parseError(error) {
             return Fliplet.parseError(error);
           }
+        },
+        methods: {
+          loadMore() {
+            if (!this.rows || typeof this.rows.next !== 'function' || this.rows.isLastPage) {
+              return;
+            }
+
+            this.isLoading = true;
+
+            this.rows.next().update({ keepExisting: true }).then(() => {
+              this.isLoading = false;
+            }).catch(error => {
+              this.isLoading = false;
+
+              Fliplet.UI.errorToast(error, 'Error loading data');
+            });
+          }
+        },
+        mounted() {
+          this.lastRowObserver = new IntersectionObserver((entries) => {
+            const lastRow = entries[0];
+
+            if (lastRow.isIntersecting) {
+              this.lastRowObserver.unobserve(lastRow.target);
+              this.loadMore();
+            }
+          });
         }
       });
 
@@ -190,7 +222,7 @@
 
         loadData = parent.connection().then((connection) => {
           const cursorData = {
-            limit: _.get(data, 'limit', 10)
+            limit: parseInt(_.get(data, 'limit'), 10) || 10
           };
 
           return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: vm, data: cursorData }).then(() => {
