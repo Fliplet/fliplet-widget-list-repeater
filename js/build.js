@@ -68,10 +68,8 @@
         props: ['row', 'index'],
         data() {
           const isEditableRow = this.index === 0;
-          const id = this.row && this.row.id || Fliplet.guid();
           const result = {
-            id,
-            key: id,
+            key: this.row && this.row.id || Fliplet.guid(),
             entry: this.row,
             classes: {
               readonly: isInteract && !isEditableRow
