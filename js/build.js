@@ -126,6 +126,8 @@
             this.$parent.lastRowObserver.observe(this.$el);
           }
 
+          Fliplet.Hooks.run('listRepeaterRowReady', { instance: vm, row: this });
+
           if (!isInteract) {
             return;
           }
