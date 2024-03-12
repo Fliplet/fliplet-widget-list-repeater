@@ -18,10 +18,19 @@ fl-list-repeater .list-repeater-load-error {
   border: 1px dashed #ccc;
 }
 
+.mode-interact fl-list-repeater-row[data-view].fl-view-empty {
+  border: none;
+}
+
 .mode-interact fl-list-repeater-row.readonly {
   background-color: rgba(126, 126, 126, 0.2);
   pointer-events: none;
   opacity: 0.5;
+}
+
+.mode-interact [draggable="true"] fl-list-repeater-row.readonly [draggable="true"],
+.mode-interact fl-list-repeater-row.readonly [data-widget-package="com.fliplet.text"] > * {
+  pointer-events: none !important;
 }
 
 fl-list-repeater-row > [data-view-placeholder] {

@@ -1,7 +1,7 @@
 (function() {
   Fliplet.ListRepeater = Fliplet.ListRepeater || {};
 
-  const repeatedListInstances = [];
+  const repeatedListInstances = {};
   const isInteract = Fliplet.Env.get('interact');
 
   const sampleData = isInteract
@@ -13,7 +13,11 @@
     : undefined;
 
   function getHtmlKeyFromPath(path) {
-    return `path${CryptoJS.MD5(path).toString().substr(-6)}`;
+    return `data${CryptoJS.MD5(path).toString().substr(-6)}`;
+  }
+
+  function normalizePath(path) {
+    return path.startsWith('$') ? path.substr(1) : `entry.data.${path}`;
   }
 
   Fliplet.Widget.instance('list-repeater', function(data, parent) {
@@ -22,17 +26,21 @@
     const templateViewName = 'content';
     const templateNodeName = 'Content';
     const rowTemplatePaths = [];
+    const testDataObject = {};
     let compiledRowTemplate;
 
     let rowTemplate = $('<div></div>').append($($rowTemplate.html() || '').find('fl-prop[data-path]').each(function(i, el) {
-      const path = el.getAttribute('data-path');
+      const path = normalizePath(el.getAttribute('data-path'));
+      let pathObject = _.get(testDataObject, path);
 
-      if (rowTemplatePaths.indexOf(path) === -1) {
-        rowTemplatePaths.push(path);
+      if (!pathObject) {
+        // Provide a unique alphanumeric key for the path suitable for v-html
+        pathObject = { path, key: getHtmlKeyFromPath(path) };
+        _.set(testDataObject, path, pathObject);
+        rowTemplatePaths.push(pathObject);
       }
 
-      // Set the v-html attribute to a unique alphanumeric key based on the path
-      el.setAttribute('v-html', `data.${ getHtmlKeyFromPath(path) }`);
+      el.setAttribute('v-html', `data.${ pathObject.key }`);
     }).end()).html();
     const emptyTemplate = $emptyTemplate.html();
 
@@ -50,7 +58,7 @@
       function getTemplateForHtml() {
         const rowTag = document.createElement('fl-list-repeater-row');
 
-        rowTag.setAttribute(':data-row-id', 'key');
+        rowTag.setAttribute(':data-row-id', 'row.id');
         rowTag.setAttribute(':key', 'key');
         rowTag.setAttribute(':class', 'classes');
         rowTag.setAttribute('v-bind', 'attrs');
@@ -78,38 +86,77 @@
               'data-view': isEditableRow ? templateViewName : undefined,
               'data-node-name': isEditableRow ? templateNodeName : undefined
             },
-            data: {}
+            data: {},
+            viewContainer: undefined
           };
-
-          if (!isInteract) {
-            // Loop through the row template paths and set the data for v-html
-            rowTemplatePaths.forEach((path) => {
-              result.data[getHtmlKeyFromPath(path)] = _.get(this, path);
-            });
-          }
 
           return result;
         },
+        watch: {
+          row() {
+            this.setData();
+            this.entry = this.row;
+          }
+        },
         methods: {
+          setData() {
+            if (isInteract) {
+              return;
+            }
+
+            // Loop through the row template paths and set the data for v-html
+            rowTemplatePaths.forEach((pathObject) => {
+              this.$set(this.data, pathObject.key, _.get(this, pathObject.path));
+            });
+          },
+          forceRender() {
+            // Never update the first row as this will cause an infinite loop
+            if (this.index === 0) {
+              return;
+            }
+
+            // Generate a new GUID and take the last 4 characters
+            const newSuffix = new Date().getTime();
+
+            // Regular expression to match a hyphen followed by exactly four characters at the end of the string
+            const regex = /-\d{13}$/;
+
+            // Check if the original string matches the pattern
+            if (regex.test(this.key)) {
+              // Replace the last 4 characters with the new GUID suffix
+              this.key = this.key.replace(regex, `-${newSuffix}`);
+            } else {
+              // Append the new suffix to the original string
+              this.key = `${this.key}-${newSuffix}`;
+            }
+          },
+          onChangeDetected: _.debounce(function() {
+            rowTemplate = this.$el.innerHTML.trim();
+            compiledRowTemplate = Vue.compile(getTemplateForHtml());
+
+            this.$parent.onTemplateChange();
+          }, 200),
           onClick() {
             if (!data.clickAction) {
               return;
             }
 
-            const clickAction = _.merge({}, data.clickAction);
+            const clickAction = { ...data.clickAction };
 
             // Add data source entry ID to query string
             if (clickAction.action === 'screen') {
-              // @TODO: Add support for Fliplet.Navigate.queryStringToObject() and Fliplet.Navigate.objectToQueryString()
-              // const query = Fliplet.Navigate.queryStringToObject(clickAction.query || '');
-              // const dataSourceEntryId = _.get(this.row, 'id');
-
-              // if (dataSourceEntryId && !query.dataSourceEntryId) {
-              //   query.dataSourceEntryId = dataSourceEntryId;
-              //   clickAction.query = Fliplet.Navigate.objectToQueryString(query);
-              // }
               clickAction.query = clickAction.query || '';
-              clickAction.query += `${clickAction.query ? '&' : ''}dataSourceEntryId=${this.row.id}`;
+
+              // If the query string already contains a dataSourceEntryId, don't add it again
+              if (!/(&|^)dataSourceEntryId=/.test(clickAction.query)) {
+                let separator = '';
+
+                if (clickAction.query && !clickAction.query.endsWith('&')) {
+                  separator = '&';
+                }
+
+                clickAction.query += `${separator}dataSourceEntryId=${this.row.id}`;
+              }
             }
 
             Fliplet.Navigate.to(clickAction);
@@ -119,6 +166,8 @@
           return compiledRowTemplate.render.call(this, createElement);
         },
         mounted() {
+          this.setData();
+
           Fliplet.Widget.initializeChildren(this.$el, this);
 
           // Observe when the last row is in view
@@ -132,31 +181,25 @@
             return;
           }
 
+          /* Edit mode only */
+
           if (this.index === 0) {
-            this.$nextTick(() => {
-              // Update screen structure in Studio after rendering
-              Fliplet.Studio.emit('update-dom');
+            this.viewContainer = new Fliplet.Interact.ViewContainer(this.$el, {
+              placeholder: emptyTemplate
             });
 
-            // @TODO: Add MutationObserver to detect show/hide view placeholder when content is removed/added
+            Fliplet.Hooks.on('componentEvent', (eventData) => {
+              // Render event from a child component
+              if (eventData.type === 'render' || eventData.target.parents({ widgetId: data.id }).length) {
+                this.onChangeDetected();
+              }
+            });
+
+            // Components are updated
+            this.viewContainer.onContentChange(() => {
+              this.onChangeDetected();
+            });
           }
-
-          Fliplet.Studio.onEvent((event) => {
-            const eventType = _.get(event, 'detail.type');
-
-            switch (eventType) {
-              case 'domUpdated':
-                if (this.index === 0) {
-                  rowTemplate = this.$el.innerHTML.trim();
-                  compiledRowTemplate = Vue.compile(getTemplateForHtml());
-                }
-
-                this.$forceUpdate();
-                break;
-              default:
-                break;
-            }
-          });
         },
         beforeDestroy() {
           Fliplet.Widget.destroyChildren(this.$el);
@@ -186,6 +229,15 @@
           }
         },
         methods: {
+          onTemplateChange() {
+            this.$children.forEach(($row, index) => {
+              if (index === 0) {
+                return;
+              }
+
+              $row.forceRender();
+            });
+          },
           loadMore() {
             if (!this.rows || typeof this.rows.next !== 'function' || this.rows.isLastPage) {
               return;
@@ -256,7 +308,8 @@
       });
     });
 
-    repeatedListInstances.push(container);
+    container.id = data.id;
+    repeatedListInstances[data.id] = container;
   }, {
     supportsDynamicContext: true
   });
@@ -269,7 +322,7 @@
     options = options || { ts: 10 };
 
     return Fliplet().then(function() {
-      return Promise.all(repeatedListInstances).then(function(containers) {
+      return Promise.all(_.values(repeatedListInstances)).then(function(containers) {
         var container;
 
         if (typeof filter === 'undefined') {
@@ -304,7 +357,7 @@
     }
 
     return Fliplet().then(function() {
-      return Promise.all(repeatedListInstances).then(function(containers) {
+      return Promise.all(_.values(repeatedListInstances)).then(function(containers) {
         if (typeof filter === 'undefined') {
           return containers;
         }

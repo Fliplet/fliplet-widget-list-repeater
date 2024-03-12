@@ -9,7 +9,8 @@
   "html_tag": "div",
   "references": ["content:richContent"],
   "settings": {
-    "interfaceWidgetPackage": "com.fliplet.helper-configuration"
+    "interfaceWidgetPackage": "com.fliplet.helper-configuration",
+    "asyncRendering": true
   },
   "interface": {
     "assets": ["js/interface.js"]
