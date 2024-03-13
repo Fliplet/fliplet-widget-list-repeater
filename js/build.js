@@ -64,7 +64,7 @@
         rowTag.setAttribute('v-bind', 'attrs');
         rowTag.setAttribute('v-on:click', 'onClick');
 
-        rowTag.innerHTML = rowTemplate || (isInteract ? emptyTemplate : '');
+        $(rowTag).html(rowTemplate || (isInteract ? emptyTemplate : ''));
 
         return rowTag.outerHTML;
       }
