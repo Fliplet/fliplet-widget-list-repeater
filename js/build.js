@@ -4,11 +4,12 @@
   const repeatedListInstances = {};
   const isInteract = Fliplet.Env.get('interact');
 
+  const now = new Date().toISOString();
   const sampleData = isInteract
     ? [
-      { id: 1, data: {} },
-      { id: 2, data: {} },
-      { id: 3, data: {} }
+      { id: 1, data: {}, updatedAt: now },
+      { id: 2, data: {}, updatedAt: now },
+      { id: 3, data: {}, updatedAt: now }
     ]
     : undefined;
 
@@ -20,7 +21,17 @@
     return path.startsWith('$') ? path.substr(1) : `entry.data.${path}`;
   }
 
+  function getRowKey(row) {
+    if (!row) {
+      return Fliplet.guid();
+    }
+
+    return `${row.id}-${new Date(row.updatedAt).getTime()}`;
+  }
+
   Fliplet.Widget.instance('list-repeater', function(data, parent) {
+    // TODO: Update parent reference to use Fliplet.Widget.findParent() to consider multiple levels of parent-child relationships
+
     const $rowTemplate = $(this).find('template[name="row"]').eq(0);
     const $emptyTemplate = $(this).find('template[name="empty"]').eq(0);
     const templateViewName = 'content';
@@ -48,13 +59,6 @@
     $emptyTemplate.remove();
 
     const container = new Promise((resolve) => {
-      _.extend(data, {
-        rows: undefined,
-        parent
-      });
-
-      data.direction = data.direction || 'vertical';
-
       function getTemplateForHtml() {
         const rowTag = document.createElement('fl-list-repeater-row');
 
@@ -77,7 +81,6 @@
         data() {
           const isEditableRow = this.index === 0;
           const result = {
-            key: this.row && this.row.id || Fliplet.guid(),
             entry: this.row,
             classes: {
               readonly: isInteract && !isEditableRow
@@ -94,8 +97,18 @@
         },
         watch: {
           row() {
-            this.setData();
             this.entry = this.row;
+            this.setData();
+          },
+          key() {
+            Fliplet.Widget.initializeChildren(this.$el, this);
+
+            Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: vm, row: this });
+          }
+        },
+        computed: {
+          key() {
+            return getRowKey(this.row);
           }
         },
         methods: {
@@ -210,15 +223,26 @@
       const vm = new Vue({
         el: this,
         data() {
-          var result = {
+          return {
             isInteract,
             isLoading: false,
             error: undefined,
             lastRowObserver: undefined,
+            rows: [],
+            pendingUpdates: {
+              inserted: [],
+              updated: [],
+              deleted: []
+            },
+            subscription: undefined,
+            direction: data.direction || 'vertical',
             noDataTemplate: data.noDataContent ||  T('widgets.listRepeater.noDataContent')
           };
-
-          return Object.assign(result, data);
+        },
+        computed: {
+          hasPendingUpdates() {
+            return Object.values(this.pendingUpdates).some(value => value.length);
+          }
         },
         components: {
           row: rowComponent
@@ -252,6 +276,145 @@
 
               Fliplet.UI.errorToast(error, 'Error loading data');
             });
+          },
+          onInsert(insertions = []) {
+            insertions.forEach(insertion => {
+              // Since it's an insert, just add to the inserted array
+              // Check if already exists in inserted to replace it (it shouldn't happen but just in case)
+              const existingIndex = this.pendingUpdates.inserted.findIndex(row => row.id === insertion.id);
+
+              if (existingIndex !== -1) {
+                this.$set(this.pendingUpdates.inserted, existingIndex, insertion);
+              } else {
+                this.pendingUpdates.inserted.push(insertion);
+              }
+            });
+          },
+          onUpdate(updates = []) {
+            updates.forEach(update => {
+              // Check if the entry exists in inserted; if so, update it there
+              const insertedIndex = this.pendingUpdates.inserted.findIndex(row => row.id === update.id);
+
+              if (insertedIndex !== -1) {
+                this.$set(this.pendingUpdates.inserted, insertedIndex, update);
+
+                return;
+              }
+
+              // Otherwise, update or add to the updated array
+              const existingIndex = this.pendingUpdates.updated.findIndex(row => row.id === update.id);
+
+              if (existingIndex !== -1) {
+                this.$set(this.pendingUpdates.updated, existingIndex, update);
+              } else {
+                this.pendingUpdates.updated.push(update);
+              }
+            });
+          },
+          onDelete(deletions = []) {
+            deletions.forEach(deletion => {
+              // Remove from inserted if present
+              const insertedIndex = this.pendingUpdates.inserted.findIndex(row => row.id === deletion.id);
+
+              if (insertedIndex !== -1) {
+                this.pendingUpdates.inserted.splice(insertedIndex, 1);
+
+                return; // No need to add to deleted since it was never applied
+              }
+
+              // Remove from updated if present
+              const updatedIndex = this.pendingUpdates.updated.findIndex(row => row.id === deletion.id);
+
+              if (updatedIndex !== -1) {
+                this.pendingUpdates.updated.splice(updatedIndex, 1);
+              }
+
+              // Finally, add to deleted if not already there and not in inserted
+              if (!this.pendingUpdates.deleted.includes(deletion.id)) {
+                this.pendingUpdates.deleted.push(deletion.id);
+              }
+            });
+          },
+          applyUpdates() {
+            // Apply inserted entries
+            // TODO: Insert entries in the correct order
+            this.rows.push(...this.pendingUpdates.inserted);
+
+            // Apply updated entries
+            this.pendingUpdates.updated.forEach(update => {
+              const index = this.rows.findIndex(row => row.id === update.id);
+
+              if (index !== -1) {
+                this.$set(this.rows, index, update);
+              }
+            });
+
+            // Remove deleted entries
+            this.pendingUpdates.deleted.forEach(deletedId => {
+              const index = this.rows.findIndex(row => row.id === deletedId);
+
+              if (index !== -1) {
+                this.rows.splice(index, 1);
+              }
+            });
+
+            // Reset pendingUpdates
+            this.pendingUpdates = {
+              inserted: [],
+              updated: [],
+              deleted: []
+            };
+          },
+          subscribe(connection, cursor) {
+            switch (data.updateType) {
+              case 'informed':
+              case 'live':
+                // Deletions can be handled but currently isn't being monitored
+                // because API is incomplete to provide the necessary information
+                var events = ['update'];
+
+                this.subscription = connection.subscribe({ cursor, events }, (bundle) => {
+                  if (events.includes('insert')) {
+                    this.onInsert(bundle.inserted);
+                  }
+
+                  if (events.includes('update')) {
+                    this.onUpdate(bundle.updated);
+                  }
+
+                  if (events.includes('delete')) {
+                    this.onDelete(bundle.deleted);
+                  }
+
+                  if (data.updateType === 'live') {
+                    this.applyUpdates();
+                  } else if (this.hasPendingUpdates) {
+                    // Show toast message
+                    Fliplet.UI.Toast({
+                      message: 'New data available',
+                      duration: false,
+                      actions: [
+                        {
+                          label: 'Refresh',
+                          action() {
+                            vm.applyUpdates();
+                          }
+                        },
+                        {
+                          label: 'Ignore',
+                          action() {
+                            // Do nothing
+                          }
+                        }
+                      ]
+                    });
+                  }
+                });
+                break;
+              case 'none':
+              default:
+                break;
+            }
           }
         },
         mounted() {
@@ -282,6 +445,10 @@
 
           return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: vm, data: cursorData }).then(() => {
             return connection.findWithCursor(cursorData);
+          }).then((cursor) => {
+            vm.subscribe(connection, cursor);
+
+            return cursor;
           });
         });
       } else {
