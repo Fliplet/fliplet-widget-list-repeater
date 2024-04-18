@@ -38,7 +38,7 @@
     const testDataObject = {};
     let compiledRowTemplate;
 
-    let rowTemplate = $('<div></div>').append($($rowTemplate.html() || '').find('fl-prop[data-path]').each(function(i, el) {
+    let rowTemplate = $('<div></div>').html($rowTemplate.html() || '').find('fl-prop[data-path]').each(function(i, el) {
       const path = normalizePath(el.getAttribute('data-path'));
       let pathObject = _.get(testDataObject, path);
 
@@ -50,7 +50,7 @@
       }
 
       el.setAttribute('v-html', `data.${ pathObject.key }`);
-    }).end()).html();
+    }).end().html();
     const emptyTemplate = $emptyTemplate.html();
 
     $rowTemplate.remove();
