@@ -29,9 +29,7 @@
     return `${row.id}-${new Date(row.updatedAt).getTime()}`;
   }
 
-  Fliplet.Widget.instance('list-repeater', function(data, parent) {
-    // TODO: Update parent reference to use Fliplet.Widget.findParent() to consider multiple levels of parent-child relationships
-
+  Fliplet.Widget.instance('list-repeater', async function(data) {
     const $rowTemplate = $(this).find('template[name="row"]').eq(0);
     const $emptyTemplate = $(this).find('template[name="empty"]').eq(0);
     const templateViewName = 'content';
@@ -57,6 +55,15 @@
 
     $rowTemplate.remove();
     $emptyTemplate.remove();
+
+    let [parent] = await Fliplet.Widget.findParents({
+      instanceId: data.id,
+      filter: { package: 'com.fliplet.dynamic-container' }
+    });
+
+    if (parent) {
+      parent = await Fliplet.DynamicContainer.get(parent.id);
+    }
 
     const container = new Promise((resolve) => {
       function getTemplateForHtml() {
