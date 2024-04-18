@@ -1,6 +1,6 @@
 {
   "name": "List repeater",
-  "package": "com.fliplet.repeater",
+  "package": "com.fliplet.list-repeater",
   "version": "1.0.0",
   "description": "",
   "icon": "img/icon.png",
