@@ -224,6 +224,8 @@
         el: this,
         data() {
           return {
+            id: data.id,
+            uuid: data.uuid,
             isInteract,
             isLoading: false,
             error: undefined,
@@ -482,8 +484,8 @@
   });
 
   Fliplet.ListRepeater.get = function(filter, options) {
-    if (typeof filter === 'string') {
-      filter = { name: filter };
+    if (typeof filter !== 'object' || typeof filter !== 'function') {
+      filter = { id: filter };
     }
 
     options = options || { ts: 10 };
@@ -519,8 +521,8 @@
   };
 
   Fliplet.ListRepeater.getAll = function(filter) {
-    if (typeof filter === 'string') {
-      filter = { name: filter };
+    if (typeof filter !== 'object' || typeof filter !== 'function') {
+      filter = { id: filter };
     }
 
     return Fliplet().then(function() {
