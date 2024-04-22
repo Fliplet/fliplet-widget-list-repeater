@@ -424,6 +424,52 @@
               default:
                 break;
             }
+          },
+          loadData() {
+            let loadData;
+
+            // Fetch data using the dynamic container connection
+            if (isInteract) {
+              loadData = Promise.resolve(sampleData);
+            } else if (parent && typeof parent.connection === 'function') {
+              this.isLoading = true;
+              this.error = undefined;
+
+              loadData = parent.connection().then((connection) => {
+                const cursorData = {
+                  limit: parseInt(_.get(data, 'limit'), 10) || 10
+                };
+
+                return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: this, data: cursorData }).then(() => {
+                  return connection.findWithCursor(cursorData);
+                }).then((cursor) => {
+                  this.subscribe(connection, cursor);
+
+                  return cursor;
+                });
+              });
+            } else {
+              loadData = Promise.resolve();
+            }
+
+            loadData.then((result = []) => {
+              this.isLoading = false;
+              this.rows = result;
+              resolve(this);
+
+              Fliplet.Hooks.run('listRepeaterDataRetrieved', { instance: this, data: result });
+            }).catch((error) => {
+              this.isLoading = false;
+              this.error = error;
+
+              Fliplet.Hooks.run('listRepeaterDataRetrieveError', { instance: this, error });
+
+              this.$nextTick(() => {
+                $(this.$el).find('.list-repeater-load-error').translate();
+              });
+
+              resolve(this);
+            });
           }
         },
         mounted() {
@@ -435,52 +481,9 @@
               this.loadMore();
             }
           });
+
+          this.loadData();
         }
-      });
-
-      let loadData;
-
-      // Fetch data using the dynamic container connection
-      if (isInteract) {
-        loadData = Promise.resolve(sampleData);
-      } else if (parent && typeof parent.connection === 'function') {
-        vm.isLoading = true;
-        vm.error = undefined;
-
-        loadData = parent.connection().then((connection) => {
-          const cursorData = {
-            limit: parseInt(_.get(data, 'limit'), 10) || 10
-          };
-
-          return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: vm, data: cursorData }).then(() => {
-            return connection.findWithCursor(cursorData);
-          }).then((cursor) => {
-            vm.subscribe(connection, cursor);
-
-            return cursor;
-          });
-        });
-      } else {
-        loadData = Promise.resolve();
-      }
-
-      loadData.then((result = []) => {
-        vm.isLoading = false;
-        vm.rows = result;
-        resolve(vm);
-
-        Fliplet.Hooks.run('listRepeaterDataRetrieved', { instance: vm, data: result });
-      }).catch((error) => {
-        vm.isLoading = false;
-        vm.error = error;
-
-        Fliplet.Hooks.run('listRepeaterDataRetrieveError', { instance: vm, error });
-
-        vm.$nextTick(() => {
-          $(vm.$el).find('.list-repeater-load-error').translate();
-        });
-
-        resolve(vm);
       });
     });
 
