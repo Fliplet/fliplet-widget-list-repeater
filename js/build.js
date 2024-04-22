@@ -466,6 +466,15 @@
               };
             });
           },
+          getSortOrder() {
+            return _.compact((data.sorts || []).map((sort) => {
+              if (!sort.field) {
+                return;
+              }
+
+              return [`data.${sort.field}`, sort.order];
+            }));
+          },
           loadData() {
             let loadData;
 
@@ -481,9 +490,12 @@
 
                 return this.getFilterQuery();
               }).then((where) => {
+                const order = this.getSortOrder();
+
                 const cursorData = {
                   limit: parseInt(_.get(data, 'limit'), 10) || 10,
-                  where
+                  where,
+                  order
                 };
 
                 return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: this, data: cursorData }).then(() => {
