@@ -1,7 +1,7 @@
 (function() {
   Fliplet.ListRepeater = Fliplet.ListRepeater || {};
 
-  const repeatedListInstances = {};
+  const listRepeaterInstances = {};
   const isInteract = Fliplet.Env.get('interact');
 
   const now = new Date().toISOString();
@@ -485,7 +485,7 @@
     });
 
     container.id = data.id;
-    repeatedListInstances[data.id] = container;
+    listRepeaterInstances[data.id] = container;
   }, {
     supportsDynamicContext: true
   });
@@ -498,7 +498,7 @@
     options = options || { ts: 10 };
 
     return Fliplet().then(function() {
-      return Promise.all(_.values(repeatedListInstances)).then(function(containers) {
+      return Promise.all(_.values(listRepeaterInstances)).then(function(containers) {
         var container;
 
         if (typeof filter === 'undefined') {
@@ -509,7 +509,7 @@
 
         if (!container) {
           if (options.ts > 5000) {
-            return Promise.reject(`Repeated List instance not found after ${Math.ceil(options.ts / 1000)} seconds.`);
+            return Promise.reject(`List Repeater instance not found after ${Math.ceil(options.ts / 1000)} seconds.`);
           }
 
           // Containers can render over time, so we need to retry later in the process
@@ -533,7 +533,7 @@
     }
 
     return Fliplet().then(function() {
-      return Promise.all(_.values(repeatedListInstances)).then(function(containers) {
+      return Promise.all(_.values(listRepeaterInstances)).then(function(containers) {
         if (typeof filter === 'undefined') {
           return containers;
         }
