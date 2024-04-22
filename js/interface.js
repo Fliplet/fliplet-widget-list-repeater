@@ -63,7 +63,7 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
         ]
       },
       {
-        name: 'filter',
+        name: 'filters',
         type: 'list',
         label: 'How do you want to filter your data?',
         addLabel: 'Add a new filter',

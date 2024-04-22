@@ -245,7 +245,8 @@
             },
             subscription: undefined,
             direction: data.direction || 'vertical',
-            noDataTemplate: data.noDataContent ||  T('widgets.listRepeater.noDataContent')
+            noDataTemplate: data.noDataContent ||  T('widgets.listRepeater.noDataContent'),
+            connection: undefined
           };
         },
         computed: {
@@ -374,7 +375,7 @@
               deleted: []
             };
           },
-          subscribe(connection, cursor) {
+          subscribe(cursor) {
             switch (data.updateType) {
               case 'informed':
               case 'live':
@@ -382,7 +383,7 @@
                 // because API is incomplete to provide the necessary information
                 var events = ['update'];
 
-                this.subscription = connection.subscribe({ cursor, events }, (bundle) => {
+                this.subscription = this.connection.subscribe({ cursor, events }, (bundle) => {
                   if (events.includes('insert')) {
                     this.onInsert(bundle.inserted);
                   }
@@ -425,6 +426,46 @@
                 break;
             }
           },
+          getFilterValues() {
+            return Promise.all((data.filters || []).map((filter) => {
+              switch (filter.valueType) {
+                case 'profile':
+                  return Fliplet.Profile.get(filter.profileKey);
+                case 'appStorage':
+                  return Fliplet.App.Storage.get(filter.appStorageKey);
+                case 'pageQuery':
+                  return Fliplet.Navigate.query[filter.query];
+                case 'static':
+                  return filter.value;
+                default:
+                  return;
+              }
+            }));
+          },
+          getFilterQuery() {
+            // Get the values for the filters
+            return this.getFilterValues().then((values) => {
+              if (!data.filters || !data.filters.length) {
+                return;
+              }
+
+              return {
+                $filters: data.filters.map((filter, index) => {
+                  const query = {
+                    column: filter.column,
+                    condition: filter.logic
+                  };
+
+                  // Add a value to the query if valueType is set
+                  if (filter.valueType) {
+                    query.value = typeof values[index] !== 'undefined' ? values[index] : null;
+                  }
+
+                  return query;
+                })
+              };
+            });
+          },
           loadData() {
             let loadData;
 
@@ -436,14 +477,19 @@
               this.error = undefined;
 
               loadData = parent.connection().then((connection) => {
+                this.connection = connection;
+
+                return this.getFilterQuery();
+              }).then((where) => {
                 const cursorData = {
-                  limit: parseInt(_.get(data, 'limit'), 10) || 10
+                  limit: parseInt(_.get(data, 'limit'), 10) || 10,
+                  where
                 };
 
                 return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: this, data: cursorData }).then(() => {
-                  return connection.findWithCursor(cursorData);
+                  return this.connection.findWithCursor(cursorData);
                 }).then((cursor) => {
-                  this.subscribe(connection, cursor);
+                  this.subscribe(cursor);
 
                   return cursor;
                 });
