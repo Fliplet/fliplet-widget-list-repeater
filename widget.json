@@ -13,6 +13,7 @@
     "asyncRendering": true
   },
   "interface": {
+    "dependencies": ["fliplet-datasources"],
     "assets": ["js/interface.js"]
   },
   "build": {

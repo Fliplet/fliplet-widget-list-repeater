@@ -1,7 +1,7 @@
 (function() {
   Fliplet.ListRepeater = Fliplet.ListRepeater || {};
 
-  const repeatedListInstances = {};
+  const listRepeaterInstances = {};
   const isInteract = Fliplet.Env.get('interact');
 
   const now = new Date().toISOString();
@@ -245,7 +245,8 @@
             },
             subscription: undefined,
             direction: data.direction || 'vertical',
-            noDataTemplate: data.noDataContent ||  T('widgets.listRepeater.noDataContent')
+            noDataTemplate: data.noDataContent ||  T('widgets.listRepeater.noDataContent'),
+            connection: undefined
           };
         },
         computed: {
@@ -374,7 +375,7 @@
               deleted: []
             };
           },
-          subscribe(connection, cursor) {
+          subscribe(cursor) {
             switch (data.updateType) {
               case 'informed':
               case 'live':
@@ -382,7 +383,7 @@
                 // because API is incomplete to provide the necessary information
                 var events = ['update'];
 
-                this.subscription = connection.subscribe({ cursor, events }, (bundle) => {
+                this.subscription = this.connection.subscribe({ cursor, events }, (bundle) => {
                   if (events.includes('insert')) {
                     this.onInsert(bundle.inserted);
                   }
@@ -424,6 +425,97 @@
               default:
                 break;
             }
+          },
+          getFilterValues() {
+            return Promise.all((data.filters || []).map((filter) => {
+              switch (filter.valueType) {
+                case 'profile':
+                  return Fliplet.Profile.get(filter.profileKey);
+                case 'appStorage':
+                  return Fliplet.App.Storage.get(filter.appStorageKey);
+                case 'pageQuery':
+                  return Fliplet.Navigate.query[filter.query];
+                case 'static':
+                  return filter.value;
+                default:
+                  return;
+              }
+            }));
+          },
+          getFilterQuery() {
+            // Get the values for the filters
+            return this.getFilterValues().then((values) => {
+              if (!data.filters || !data.filters.length) {
+                return;
+              }
+
+              return {
+                $filters: data.filters.map((filter, index) => {
+                  const query = {
+                    column: filter.field,
+                    condition: filter.logic
+                  };
+
+                  // Add a value to the query if valueType is set
+                  if (filter.valueType) {
+                    query.value = typeof values[index] !== 'undefined' ? values[index] : null;
+                  }
+
+                  return query;
+                })
+              };
+            });
+          },
+          loadData() {
+            let loadData;
+
+            // Fetch data using the dynamic container connection
+            if (isInteract) {
+              loadData = Promise.resolve(sampleData);
+            } else if (parent && typeof parent.connection === 'function') {
+              this.isLoading = true;
+              this.error = undefined;
+
+              loadData = parent.connection().then((connection) => {
+                this.connection = connection;
+
+                return this.getFilterQuery();
+              }).then((where) => {
+                const cursorData = {
+                  limit: parseInt(_.get(data, 'limit'), 10) || 10,
+                  where
+                };
+
+                return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: this, data: cursorData }).then(() => {
+                  return this.connection.findWithCursor(cursorData);
+                }).then((cursor) => {
+                  this.subscribe(cursor);
+
+                  return cursor;
+                });
+              });
+            } else {
+              loadData = Promise.resolve();
+            }
+
+            loadData.then((result = []) => {
+              this.isLoading = false;
+              this.rows = result;
+              resolve(this);
+
+              Fliplet.Hooks.run('listRepeaterDataRetrieved', { instance: this, data: result });
+            }).catch((error) => {
+              this.isLoading = false;
+              this.error = error;
+
+              Fliplet.Hooks.run('listRepeaterDataRetrieveError', { instance: this, error });
+
+              this.$nextTick(() => {
+                $(this.$el).find('.list-repeater-load-error').translate();
+              });
+
+              resolve(this);
+            });
           }
         },
         mounted() {
@@ -435,57 +527,14 @@
               this.loadMore();
             }
           });
+
+          this.loadData();
         }
-      });
-
-      let loadData;
-
-      // Fetch data using the dynamic container connection
-      if (isInteract) {
-        loadData = Promise.resolve(sampleData);
-      } else if (parent && typeof parent.connection === 'function') {
-        vm.isLoading = true;
-        vm.error = undefined;
-
-        loadData = parent.connection().then((connection) => {
-          const cursorData = {
-            limit: parseInt(_.get(data, 'limit'), 10) || 10
-          };
-
-          return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: vm, data: cursorData }).then(() => {
-            return connection.findWithCursor(cursorData);
-          }).then((cursor) => {
-            vm.subscribe(connection, cursor);
-
-            return cursor;
-          });
-        });
-      } else {
-        loadData = Promise.resolve();
-      }
-
-      loadData.then((result = []) => {
-        vm.isLoading = false;
-        vm.rows = result;
-        resolve(vm);
-
-        Fliplet.Hooks.run('listRepeaterDataRetrieved', { instance: vm, data: result });
-      }).catch((error) => {
-        vm.isLoading = false;
-        vm.error = error;
-
-        Fliplet.Hooks.run('listRepeaterDataRetrieveError', { instance: vm, error });
-
-        vm.$nextTick(() => {
-          $(vm.$el).find('.list-repeater-load-error').translate();
-        });
-
-        resolve(vm);
       });
     });
 
     container.id = data.id;
-    repeatedListInstances[data.id] = container;
+    listRepeaterInstances[data.id] = container;
   }, {
     supportsDynamicContext: true
   });
@@ -498,7 +547,7 @@
     options = options || { ts: 10 };
 
     return Fliplet().then(function() {
-      return Promise.all(_.values(repeatedListInstances)).then(function(containers) {
+      return Promise.all(_.values(listRepeaterInstances)).then(function(containers) {
         var container;
 
         if (typeof filter === 'undefined') {
@@ -509,7 +558,7 @@
 
         if (!container) {
           if (options.ts > 5000) {
-            return Promise.reject(`Repeated List instance not found after ${Math.ceil(options.ts / 1000)} seconds.`);
+            return Promise.reject(`List Repeater instance not found after ${Math.ceil(options.ts / 1000)} seconds.`);
           }
 
           // Containers can render over time, so we need to retry later in the process
@@ -533,7 +582,7 @@
     }
 
     return Fliplet().then(function() {
-      return Promise.all(_.values(repeatedListInstances)).then(function(containers) {
+      return Promise.all(_.values(listRepeaterInstances)).then(function(containers) {
         if (typeof filter === 'undefined') {
           return containers;
         }
