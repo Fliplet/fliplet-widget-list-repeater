@@ -452,7 +452,7 @@
               return {
                 $filters: data.filters.map((filter, index) => {
                   const query = {
-                    column: filter.column,
+                    column: filter.field,
                     condition: filter.logic
                   };
 

@@ -67,11 +67,11 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
         type: 'list',
         label: 'How do you want to filter your data?',
         addLabel: 'Add a new filter',
-        headingFieldName: 'column',
+        headingFieldName: 'field',
         emptyListPlaceholderHtml: '<p>Click the button below to add a filter</p>',
         fields: [
           {
-            name: 'column',
+            name: 'field',
             type: 'dropdown',
             label: 'Data field',
             required: true,
