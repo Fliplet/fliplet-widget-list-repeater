@@ -205,7 +205,7 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
       },
       {
         name: 'limit',
-        label: 'Show number of records / pages',
+        label: 'Show number of records / page',
         type: 'text',
         placeholder: 'Default: 10'
       },
