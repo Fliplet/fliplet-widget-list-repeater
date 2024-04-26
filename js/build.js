@@ -108,9 +108,11 @@
             this.setData();
           },
           key() {
-            Fliplet.Widget.initializeChildren(this.$el, this);
+            this.$nextTick(() => {
+              Fliplet.Widget.initializeChildren(this.$el, this);
 
-            Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: vm, row: this });
+              Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: vm, row: this });
+            });
           }
         },
         computed: {
@@ -411,7 +413,7 @@
                           }
                         },
                         {
-                          label: 'Ignore',
+                          icon: 'fa-times',
                           action() {
                             // Do nothing
                           }
