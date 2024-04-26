@@ -484,7 +484,7 @@
                 return this.getFilterQuery();
               }).then((where) => {
                 const cursorData = {
-                  limit: parseInt(_.get(data, 'limit'), 10) || 10,
+                  limit: parseInt(_.get(data, 'limit'), 10) || 25,
                   where
                 };
 
