@@ -41,6 +41,7 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
           });
         }
       },
+      { type: 'hr' },
       {
         type: 'radio',
         name: 'updateType',
@@ -62,13 +63,48 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
           }
         ]
       },
+      { type: 'hr' },
+      {
+        name: 'sorts',
+        type: 'list',
+        label: 'How do you want to sort your data?',
+        addLabel: 'Add sort condition',
+        headingFieldName: 'field',
+        fields: [
+          {
+            name: 'field',
+            type: 'dropdown',
+            label: 'Data field',
+            required: true,
+            placeholder: '-- Select a column',
+            options: dataSourceColumns
+          },
+          {
+            name: 'order',
+            type: 'dropdown',
+            label: 'Sort order',
+            required: true,
+            placeholder: false,
+            default: 'asc',
+            options: [
+              {
+                label: 'Ascending',
+                value: 'asc'
+              },
+              {
+                label: 'Descending',
+                value: 'desc'
+              }
+            ]
+          }
+        ]
+      },
       {
         name: 'filters',
         type: 'list',
         label: 'How do you want to filter your data?',
-        addLabel: 'Add a new filter',
+        addLabel: 'Add filter',
         headingFieldName: 'field',
-        emptyListPlaceholderHtml: '<p>Click the button below to add a filter</p>',
         fields: [
           {
             name: 'field',
