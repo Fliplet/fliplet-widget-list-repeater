@@ -41,6 +41,7 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
           });
         }
       },
+      { type: 'hr' },
       {
         type: 'radio',
         name: 'updateType',
@@ -62,11 +63,12 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
           }
         ]
       },
+      { type: 'hr' },
       {
         name: 'sorts',
         type: 'list',
         label: 'How do you want to sort your data?',
-        addLabel: 'Add a new sort condition',
+        addLabel: 'Add sort condition',
         headingFieldName: 'field',
         fields: [
           {
@@ -101,7 +103,7 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
         name: 'filters',
         type: 'list',
         label: 'How do you want to filter your data?',
-        addLabel: 'Add a new filter',
+        addLabel: 'Add filter',
         headingFieldName: 'field',
         fields: [
           {
