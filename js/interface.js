@@ -65,6 +65,22 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
       },
       { type: 'hr' },
       {
+        type: 'provider',
+        package: 'com.fliplet.data-source-provider',
+        data: function() {
+          return Fliplet.Widget.findParents({ filter: { package: 'com.fliplet.dynamic-container' } }).then((widgets) => {
+            const dynamicContainer = widgets[0];
+
+            return {
+              readonly: true,
+              dataSourceTitle: 'Get data from...',
+              dataSourceId: dynamicContainer && dynamicContainer.dataSourceId,
+              helpText: 'To change this data source, go to the parent <strong>Dynamic container</strong>'
+            };
+          });
+        }
+      },
+      {
         name: 'sorts',
         type: 'list',
         label: 'How do you want to sort your data?',
