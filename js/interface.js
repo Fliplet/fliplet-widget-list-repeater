@@ -240,12 +240,6 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
         ]
       },
       {
-        name: 'limit',
-        label: 'Show number of records / pages',
-        type: 'text',
-        placeholder: 'Default: 10'
-      },
-      {
         name: 'noDataContent',
         type: 'textarea',
         label: 'Text to show if no data loaded',

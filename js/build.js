@@ -108,9 +108,11 @@
             this.setData();
           },
           key() {
-            Fliplet.Widget.initializeChildren(this.$el, this);
+            this.$nextTick(() => {
+              Fliplet.Widget.initializeChildren(this.$el, this);
 
-            Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: vm, row: this });
+              Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: vm, row: this });
+            });
           }
         },
         computed: {
@@ -411,7 +413,7 @@
                           }
                         },
                         {
-                          label: 'Ignore',
+                          icon: 'fa-times',
                           action() {
                             // Do nothing
                           }
@@ -493,7 +495,7 @@
                 const order = this.getSortOrder();
 
                 const cursorData = {
-                  limit: parseInt(_.get(data, 'limit'), 10) || 10,
+                  limit: parseInt(_.get(data, 'limit'), 10) || 25,
                   where,
                   order
                 };
