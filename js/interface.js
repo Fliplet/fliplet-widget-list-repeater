@@ -41,7 +41,6 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
           });
         }
       },
-      { type: 'hr' },
       {
         type: 'radio',
         name: 'updateType',
@@ -63,7 +62,6 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
           }
         ]
       },
-      { type: 'hr' },
       {
         type: 'provider',
         package: 'com.fliplet.data-source-provider',
