@@ -89,6 +89,7 @@
           const isEditableRow = this.index === 0;
           const result = {
             entry: this.row,
+            key: getRowKey(this.row),
             classes: {
               readonly: isInteract && !isEditableRow
             },
@@ -105,6 +106,7 @@
         watch: {
           row() {
             this.entry = this.row;
+            this.key = getRowKey(this.row);
             this.setData();
           },
           key() {
@@ -113,11 +115,6 @@
 
               Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: vm, row: this });
             });
-          }
-        },
-        computed: {
-          key() {
-            return getRowKey(this.row);
           }
         },
         methods: {
@@ -137,7 +134,7 @@
               return;
             }
 
-            // Generate a new GUID and take the last 4 characters
+            // Generate a new GUID suffix
             const newSuffix = new Date().getTime();
 
             // Regular expression to match a hyphen followed by exactly four characters at the end of the string
@@ -145,7 +142,7 @@
 
             // Check if the original string matches the pattern
             if (regex.test(this.key)) {
-              // Replace the last 4 characters with the new GUID suffix
+              // Replace the suffix with the new GUID suffix
               this.key = this.key.replace(regex, `-${newSuffix}`);
             } else {
               // Append the new suffix to the original string
