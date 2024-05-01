@@ -492,13 +492,15 @@
 
                 return this.getFilterQuery();
               }).then((where) => {
-                const order = this.getSortOrder();
-
                 const cursorData = {
                   limit: parseInt(_.get(data, 'limit'), 10) || 25,
-                  where,
-                  order
+                  where
                 };
+                const order = this.getSortOrder();
+
+                if (order.length) {
+                  cursorData.order = order;
+                }
 
                 return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: this, data: cursorData }).then(() => {
                   return this.connection.findWithCursor(cursorData);
