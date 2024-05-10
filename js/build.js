@@ -502,7 +502,9 @@
                 return Fliplet.Hooks.run('listRepeaterBeforeRetrieveData', { instance: this, data: cursorData }).then(() => {
                   return this.connection.findWithCursor(cursorData);
                 }).then((cursor) => {
-                  this.subscribe(cursor);
+                  if (['informed', 'live'].includes(data.updateType)) {
+                    this.subscribe(cursor);
+                  }
 
                   return cursor;
                 });
