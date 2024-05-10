@@ -236,7 +236,7 @@
             isLoading: false,
             error: undefined,
             lastRowObserver: undefined,
-            rows: [],
+            rows: undefined,
             pendingUpdates: {
               inserted: [],
               updated: [],
