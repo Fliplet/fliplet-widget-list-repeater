@@ -189,8 +189,8 @@
 
           Fliplet.Widget.initializeChildren(this.$el, this);
 
-          // Observe when the last row is in view
-          if (this.index === this.$parent.rows.length - 1) {
+          // Observe when the last row element is in view
+          if (this.$el?.nodeType === Node.ELEMENT_NODE && this.index === this.$parent.rows.length - 1) {
             this.$parent.lastRowObserver.observe(this.$el);
           }
 
