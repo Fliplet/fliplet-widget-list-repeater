@@ -425,11 +425,48 @@
                 break;
             }
           },
+          getProfileValue(key) {
+            return Fliplet.Profile.get(key).then(result => result || '');
+          },
           getFilterValues() {
+            let sessionData;
+
             return Promise.all((data.filters || []).map((filter) => {
               switch (filter.valueType) {
                 case 'profile':
-                  return Fliplet.Profile.get(filter.profileKey);
+                  // Cache the session data to avoid multiple calls
+                  if (!sessionData) {
+                    sessionData = Fliplet.User.getCachedSession();
+                  }
+
+                  return sessionData.then(session => {
+                    // If the session is not available, use Fliplet.Profile
+                    if (!session || !session.entries) {
+                      return this.getProfileValue(filter.profileKey);
+                    }
+
+                    const passportKeys = [
+                      ['dataSource', 'data', filter.profileKey],
+                      ['saml2', 'user', filter.profileKey],
+                      ['flipletLogin', 'data', filter.profileKey]
+                    ];
+
+                    let userSessionValue;
+
+                    // Loop through the passport keys to find the first available value
+                    for (let key of passportKeys) {
+                      userSessionValue = _.get(session.entries, key);
+
+                      if (typeof userSessionValue !== 'undefined') {
+                        break;
+                      }
+                    }
+
+                    // Return the value if found, otherwise use Fliplet.Profile
+                    return typeof userSessionValue !== 'undefined'
+                      ? userSessionValue
+                      : this.getProfileValue(filter.profileKey);
+                  });
                 case 'appStorage':
                   return Fliplet.App.Storage.get(filter.appStorageKey);
                 case 'pageQuery':
