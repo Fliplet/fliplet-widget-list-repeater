@@ -479,12 +479,12 @@
             }));
           },
           getFilterQuery() {
+            if (!data.filters || !data.filters.length) {
+              return Promise.resolve();
+            }
+
             // Get the values for the filters
             return this.getFilterValues().then((values) => {
-              if (!data.filters || !data.filters.length) {
-                return;
-              }
-
               return {
                 $filters: data.filters.map((filter, index) => {
                   const query = {
