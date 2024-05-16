@@ -1,5 +1,5 @@
 async function getDataSourceColumns() {
-  const parents = await Fliplet.Widget.findParents({ package: 'com.fliplet.dynamic-container' });
+  const parents = await Fliplet.Widget.findParents({ filter: { package: 'com.fliplet.dynamic-container' } });
 
   if (!parents.length) {
     console.error('This component needs to be placed inside a Dynamic Container component.');
