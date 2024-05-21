@@ -1,34 +1,23 @@
 {
-  "name": "List Repeater",
-  "package": "com.fliplet.repeater",
+  "name": "List repeater",
+  "package": "com.fliplet.list-repeater",
   "version": "1.0.0",
   "description": "",
   "icon": "img/icon.png",
   "tags": ["type:component", "category:layout", "beta:true"],
   "provider_only": false,
   "html_tag": "div",
-  "references": [
-    "content:richContent"
-  ],
+  "references": ["content:richContent"],
+  "settings": {
+    "interfaceWidgetPackage": "com.fliplet.helper-configuration",
+    "asyncRendering": true
+  },
   "interface": {
-    "dependencies": [
-      "vue.js",
-      "fliplet-core",
-      "fliplet-studio-ui"
-    ],
-    "assets": [
-      "dist/css/index.css",
-      "dist/app.js"
-    ]
+    "dependencies": ["fliplet-datasources"],
+    "assets": ["js/interface.js"]
   },
   "build": {
-    "dependencies": [
-      "vue.js",
-      "fliplet-core"
-    ],
-    "assets": [
-      "css/build.css",
-      "js/build.js"
-    ]
+    "dependencies": ["vue.js", "fliplet-core"],
+    "assets": ["css/build.css", "js/build.js"]
   }
 }
