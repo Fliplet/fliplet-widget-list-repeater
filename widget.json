@@ -10,7 +10,8 @@
   "references": ["content:richContent"],
   "settings": {
     "interfaceWidgetPackage": "com.fliplet.helper-configuration",
-    "asyncRendering": true
+    "asyncRendering": true,
+    "hideThemeSettings": true
   },
   "interface": {
     "dependencies": ["fliplet-datasources"],
