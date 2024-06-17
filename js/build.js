@@ -591,41 +591,34 @@
     supportsDynamicContext: true
   });
 
-  Fliplet.ListRepeater.get = function(filter, options) {
+  Fliplet.ListRepeater.get = async function(filter, options = {}) {
     if (typeof filter !== 'object' || typeof filter !== 'function') {
       filter = { id: filter };
     }
 
-    options = options || { ts: 10 };
+    await Fliplet();
+   
+    const containers = await Promise.all(Object.values(listRepeaterInstances))
+    const container = _.find(containers, filter); // TODO: remove lodash dependency
 
-    return Fliplet().then(function() {
-      return Promise.all(_.values(listRepeaterInstances)).then(function(containers) {
-        var container;
+    // Containers can render over time, so we need to retry later in the process
+    if (!container) {
+      if (options.ts > 5000) {
+        return Promise.reject(`List Repeater instance not found after ${Math.ceil(options.ts / 1000)} seconds.`);
+      }
 
-        if (typeof filter === 'undefined') {
-          container = containers.length ? containers[0] : undefined;
-        } else {
-          container = _.find(containers, filter);
-        }
+      if (options.ts === undefined) {
+        options.ts = 10;
+      } else {
+        options.ts *= 1.5; // increase ts by 50% every time
+      }
 
-        if (!container) {
-          if (options.ts > 5000) {
-            return Promise.reject(`List Repeater instance not found after ${Math.ceil(options.ts / 1000)} seconds.`);
-          }
+      await new Promise(resolve => setTimeout(resolve, options.ts)); // sleep
 
-          // Containers can render over time, so we need to retry later in the process
-          return new Promise(function(resolve) {
-            setTimeout(function() {
-              options.ts = options.ts * 1.5;
+      return Fliplet.ListRepeater.get(filter, options);
+    }
 
-              Fliplet.ListRepeater.get(filter, options).then(resolve);
-            }, options.ts);
-          });
-        }
-
-        return container;
-      });
-    });
+    return container;
   };
 
   Fliplet.ListRepeater.getAll = function(filter) {
