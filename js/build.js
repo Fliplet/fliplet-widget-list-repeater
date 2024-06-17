@@ -592,14 +592,14 @@
   });
 
   Fliplet.ListRepeater.get = async function(filter, options = {}) {
-    if (typeof filter !== 'object' || typeof filter !== 'function') {
-      filter = { id: filter };
+    if (typeof filter === 'number' || typeof filter === 'string') {
+      filter = { id: +filter };
     }
 
     await Fliplet();
    
     const containers = await Promise.all(Object.values(listRepeaterInstances))
-    const container = _.find(containers, filter); // TODO: remove lodash dependency
+    const container = filter ? _.find(containers, filter) : containers[0]; // TODO: remove lodash dependency
 
     // Containers can render over time, so we need to retry later in the process
     if (!container) {
