@@ -4,6 +4,20 @@
   const listRepeaterInstances = {};
   const isInteract = Fliplet.Env.get('interact');
 
+  // Decorate addEventListener function to add flag once some registered action is triggered
+  const originalAddEventListener = EventTarget.prototype.addEventListener;
+
+  EventTarget.prototype.addEventListener = function(type, listener, options) {
+      if (type === 'click') {
+          originalAddEventListener.call(this, type, function(event) {
+                  listener(event);
+                  event._handled = true;
+          }, options);
+      } else {
+          originalAddEventListener.call(this, type, listener, options);
+      }
+  };
+
   const now = new Date().toISOString();
   const sampleData = isInteract
     ? [
@@ -155,8 +169,9 @@
 
             this.$parent.onTemplateChange();
           }, 200),
-          onClick() {
-            if (!data.clickAction) {
+          onClick(event) {
+            // Prevent the click action if it's already handled by another event
+            if (!data.clickAction || event._handled) {
               return;
             }
 
