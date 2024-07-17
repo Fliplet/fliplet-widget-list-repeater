@@ -45,3 +45,10 @@ fl-list-repeater-row > [data-view-placeholder] {
 fl-list-repeater-row.readonly > [data-view-placeholder] {
   opacity: 0;
 }
+
+.mode-interact .view-is-empty {
+  border: 5px solid #D4D4D4!important;
+  color: #6A6868!important;
+  font-size: 12px!important;
+  font-family: "Open Sans", sans-serif;
+}
