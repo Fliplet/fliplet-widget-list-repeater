@@ -43,7 +43,13 @@
     return `${row.id}-${new Date(row.updatedAt).getTime()}`;
   }
 
+  function errorMessageStructureNotValid($element, message) {
+    $element.addClass('component-error-before');
+    Fliplet.UI.Toast(message);
+  }
+
   Fliplet.Widget.instance('list-repeater', async function(data) {
+    const vm = this;
     const $rowTemplate = $(this).find('template[name="row"]').eq(0);
     const $emptyTemplate = $(this).find('template[name="empty"]').eq(0);
     const templateViewName = 'content';
@@ -77,7 +83,10 @@
 
     if (parent) {
       parent = await Fliplet.DynamicContainer.get(parent.id);
+    } else {
+      return errorMessageStructureNotValid($(vm.$el), 'This component needs to be placed inside a Dynamic Container and select a data source');
     }
+
 
     const container = new Promise((resolve) => {
       function getTemplateForHtml() {
