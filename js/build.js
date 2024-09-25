@@ -4,20 +4,6 @@
   const listRepeaterInstances = {};
   const isInteract = Fliplet.Env.get('interact');
 
-  // Decorate addEventListener function to add flag once some registered action is triggered
-  const originalAddEventListener = EventTarget.prototype.addEventListener;
-
-  EventTarget.prototype.addEventListener = function(type, listener, options) {
-      if (type === 'click') {
-          originalAddEventListener.call(this, type, function(event) {
-                  listener(event);
-                  event._handled = true;
-          }, options);
-      } else {
-          originalAddEventListener.call(this, type, listener, options);
-      }
-  };
-
   const now = new Date().toISOString();
   const sampleData = isInteract
     ? [
@@ -117,6 +103,22 @@
 
           return result;
         },
+        computed: {
+          rowUrl() {
+            // Compute the URL for the row, including query parameters
+            const baseUrl = Fliplet.Env.get('pageUrl');
+            const queryParams = new URLSearchParams();
+            queryParams.append('dataSourceEntryId', this.row.id);
+            
+            // Add any other relevant query parameters here
+            // For example, if you want to include all data fields:
+            Object.entries(this.row.data).forEach(([key, value]) => {
+              queryParams.append(key, value);
+            });
+
+            return `${baseUrl}?${queryParams.toString()}`;
+          }
+        },
         watch: {
           row() {
             this.entry = this.row;
@@ -197,7 +199,13 @@
           }
         },
         render(createElement) {
-          return compiledRowTemplate.render.call(this, createElement);
+          // Wrap the existing template with an <a> tag
+          return createElement('a', {
+            attrs: {
+              href: this.rowUrl,
+              class: 'list-repeater-row-link'
+            }
+          }, [compiledRowTemplate.render.call(this, createElement)]);
         },
         mounted() {
           this.setData();
