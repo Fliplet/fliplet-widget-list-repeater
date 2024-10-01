@@ -20,6 +20,6 @@
   },
   "build": {
     "dependencies": ["vue.js", "fliplet-core"],
-    "assets": ["css/build.css", "js/click.js", "js/build.js"]
+    "assets": ["css/build.css", "js/build.js"]
   }
 }

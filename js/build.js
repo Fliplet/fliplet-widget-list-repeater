@@ -29,6 +29,18 @@
     return `${row.id}-${new Date(row.updatedAt).getTime()}`;
   }
 
+  const getParentsList = (element) => {
+    const parents = [];
+    let currentElement = element;
+
+    while (currentElement) {
+      parents.push(currentElement);
+      currentElement = currentElement.parentElement;
+    }
+
+    return parents;
+  };
+
   Fliplet.Widget.instance('list-repeater', async function(data) {
     const $rowTemplate = $(this).find('template[name="row"]').eq(0);
     const $emptyTemplate = $(this).find('template[name="empty"]').eq(0);
@@ -103,22 +115,6 @@
 
           return result;
         },
-        computed: {
-          rowUrl() {
-            // Compute the URL for the row, including query parameters
-            const baseUrl = Fliplet.Env.get('pageUrl');
-            const queryParams = new URLSearchParams();
-            queryParams.append('dataSourceEntryId', this.row.id);
-            
-            // Add any other relevant query parameters here
-            // For example, if you want to include all data fields:
-            Object.entries(this.row.data).forEach(([key, value]) => {
-              queryParams.append(key, value);
-            });
-
-            return `${baseUrl}?${queryParams.toString()}`;
-          }
-        },
         watch: {
           row() {
             this.entry = this.row;
@@ -171,9 +167,14 @@
 
             this.$parent.onTemplateChange();
           }, 200),
-          onClick(event) {
-            // Prevent the click action if it's already handled by another event
-            if (!data.clickAction || event._handled) {
+          async onClick(event) {
+            // Define widgets that can be clicked inside the list repeater
+            const clickableWidgets = ['com.fliplet.social-icons', 'com.fliplet.primary-button', 'com.fliplet.slider']; 
+            const parents = getParentsList(event.target);
+            const isClickable = parents.some(parent => clickableWidgets.includes(parent.getAttribute('data-widget-package')));
+
+            // Prevent the click action if target is inside a potentially clickable widget
+            if (!data.clickAction || isClickable) {
               return;
             }
 
@@ -199,13 +200,7 @@
           }
         },
         render(createElement) {
-          // Wrap the existing template with an <a> tag
-          return createElement('a', {
-            attrs: {
-              href: this.rowUrl,
-              class: 'list-repeater-row-link'
-            }
-          }, [compiledRowTemplate.render.call(this, createElement)]);
+          return compiledRowTemplate.render.call(this, createElement);
         },
         mounted() {
           this.setData();
