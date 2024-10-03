@@ -11,7 +11,8 @@
   "settings": {
     "interfaceWidgetPackage": "com.fliplet.helper-configuration",
     "asyncRendering": true,
-    "hideThemeSettings": true
+    "hideThemeSettings": true,
+    "allowedParents": ["com.fliplet.dynamic-container"]
   },
   "interface": {
     "dependencies": ["fliplet-datasources"],
