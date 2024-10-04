@@ -4,6 +4,20 @@
   const listRepeaterInstances = {};
   const isInteract = Fliplet.Env.get('interact');
 
+  // Decorate addEventListener function to add flag once some registered action is triggered
+  const originalAddEventListener = EventTarget.prototype.addEventListener;
+
+  EventTarget.prototype.addEventListener = function(type, listener, options) {
+      if (type === 'click') {
+          originalAddEventListener.call(this, type, function(event) {
+                  listener(event);
+                  event._handled = true;
+          }, options);
+      } else {
+          originalAddEventListener.call(this, type, listener, options);
+      }
+  };
+
   const now = new Date().toISOString();
   const sampleData = isInteract
     ? [
@@ -28,18 +42,6 @@
 
     return `${row.id}-${new Date(row.updatedAt).getTime()}`;
   }
-
-  const getParentsList = (element) => {
-    const parents = [];
-    let currentElement = element;
-
-    while (currentElement) {
-      parents.push(currentElement);
-      currentElement = currentElement.parentElement;
-    }
-
-    return parents;
-  };
 
   Fliplet.Widget.instance('list-repeater', async function(data) {
     const $rowTemplate = $(this).find('template[name="row"]').eq(0);
@@ -167,14 +169,9 @@
 
             this.$parent.onTemplateChange();
           }, 200),
-          async onClick(event) {
-            // Define widgets that can be clicked inside the list repeater
-            const clickableWidgets = ['com.fliplet.social-icons', 'com.fliplet.primary-button', 'com.fliplet.slider']; 
-            const parents = getParentsList(event.target);
-            const isClickable = parents.some(parent => clickableWidgets.includes(parent.getAttribute('data-widget-package')));
-
-            // Prevent the click action if target is inside a potentially clickable widget
-            if (!data.clickAction || isClickable) {
+          onClick(event) {
+            // Prevent the click action if it's already handled by another event
+            if (!data.clickAction || event._handled) {
               return;
             }
 
