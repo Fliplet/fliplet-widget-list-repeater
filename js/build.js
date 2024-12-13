@@ -44,7 +44,7 @@
   }
 
   Fliplet.Widget.instance('list-repeater', async function(data) {
-    const $rowTemplate = $(this).find('template[name="row"]').eq(0);
+    let $rowTemplate = $(this).find('template[name="row"]').eq(0);
     const $emptyTemplate = $(this).find('template[name="empty"]').eq(0);
     const templateViewName = 'content';
     const templateNodeName = 'Content';
@@ -89,6 +89,11 @@
         rowTag.setAttribute('v-bind', 'attrs');
         rowTag.setAttribute('v-on:click', 'onClick');
 
+        // Need to set v-pre every time because it's removed by the pre-compiler
+        rowTemplate = $('<div></div>').html(rowTemplate).find('[data-fl-widget-instance]').each(function(i, el) {
+          el.setAttribute('v-pre', '');
+        }).end().html();
+
         $(rowTag).html(rowTemplate || (isInteract ? emptyTemplate : ''));
 
         return rowTag.outerHTML;
@@ -97,7 +102,7 @@
       compiledRowTemplate = Vue.compile(getTemplateForHtml());
 
       // Row component
-      const rowComponent = Vue.component(data.rowView, {
+      const rowComponent = Vue.component(data.rowView || 'list-repeater-row', {
         props: ['row', 'index'],
         data() {
           const isEditableRow = this.index === 0;
@@ -164,7 +169,7 @@
             }
           },
           onChangeDetected: _.debounce(function() {
-            rowTemplate = this.$el.innerHTML.trim();
+            $rowTemplate = this.$el.cloneNode(true);
             compiledRowTemplate = Vue.compile(getTemplateForHtml());
 
             this.$parent.onTemplateChange();
