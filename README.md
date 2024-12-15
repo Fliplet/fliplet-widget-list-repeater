@@ -1,4 +1,4 @@
-# Fliplet List Repeater widget
+# Fliplet Data list widget
 
 ## Development
 
@@ -22,15 +22,15 @@ $ fliplet run
 ---
 # JS APIs
 
-The following JS APIs are available in a screen once a **Repeater** component is dropped into the screen.
+The following JS APIs are available in a screen once a **Data list** component is dropped into the screen.
 
 ## Retrieve an instance
 
-Since you can have many list repeater components in a screen, we provide a handy function to grab a specific instance by its name or the first one available in the page when no input parameter is given.
+Since you can have many data list components in a screen, we provide a handy function to grab a specific instance by its name or the first one available in the page when no input parameter is given.
 
 ### `Fliplet.ListRepeater.get()`
 
-Retrieves the first or a specific record container instance.
+Retrieves the first or a specific Single data record instance.
 
 ```js
 // Get the first repeater instance
@@ -121,7 +121,7 @@ Fliplet.Hooks.on('repeaterDataRetrieveError', function(result) {
 
 ## Add infinite scroll to a list
 
-Here's a simple example on how you can add infinite scroll to a list using a dynamic container and a list repeater with a limit set up to 10 entries per page.
+Here's a simple example on how you can add infinite scroll to a list using a Data container and a list repeater with a limit set up to 10 entries per page.
 
 The following code will load the next page of the dataset when the user is approaching the end of the screen:
 
@@ -145,7 +145,7 @@ function loadMore() {
 }
 ```
 
-On the other hand, if you're paginating a list (e.g. moving the cursor between pages), you may need to manually refresh the list repeater:
+On the other hand, if you're paginating a list (e.g. moving the cursor between pages), you may need to manually refresh the data list:
 
 ```js
 Fliplet.ListRepeater.get().then(function (repeater) {
