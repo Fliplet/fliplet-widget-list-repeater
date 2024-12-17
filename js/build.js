@@ -529,7 +529,7 @@
           loadData() {
             let loadData;
 
-            // Fetch data using the dynamic container connection
+            // Fetch data using the Data container connection
             if (isInteract) {
               loadData = Promise.resolve(sampleData);
             } else if (parent && typeof parent.connection === 'function') {
@@ -619,7 +619,7 @@
     // Containers can render over time, so we need to retry later in the process
     if (!container) {
       if (options.ts > 5000) {
-        return Promise.reject(`List Repeater instance not found after ${Math.ceil(options.ts / 1000)} seconds.`);
+        return Promise.reject(`Data list instance not found after ${Math.ceil(options.ts / 1000)} seconds.`);
       }
 
       if (options.ts === undefined) {
