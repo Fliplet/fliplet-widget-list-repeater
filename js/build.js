@@ -395,7 +395,7 @@
               case 'live':
                 // Deletions can be handled but currently isn't being monitored
                 // because API is incomplete to provide the necessary information
-                var events = ['update'];
+                var events = ['insert', 'update', 'delete'];
 
                 this.subscription = this.connection.subscribe({ cursor, events }, (bundle) => {
                   if (events.includes('insert')) {
