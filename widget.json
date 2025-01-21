@@ -1,16 +1,17 @@
 {
-  "name": "List repeater",
+  "name": "Data list",
   "package": "com.fliplet.list-repeater",
   "version": "1.0.0",
   "description": "",
   "icon": "img/icon.png",
-  "tags": ["type:component", "category:layout"],
+  "tags": ["type:component", "category:layout", "beta:true"],
   "provider_only": false,
   "html_tag": "div",
   "references": ["content:richContent"],
   "settings": {
     "interfaceWidgetPackage": "com.fliplet.helper-configuration",
-    "asyncRendering": true
+    "asyncRendering": true,
+    "hideThemeSettings": true
   },
   "interface": {
     "dependencies": ["fliplet-datasources"],
