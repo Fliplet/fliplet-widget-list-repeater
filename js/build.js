@@ -92,6 +92,10 @@
         });
       }
 
+      if (this.element) {
+        this.element.replaceWith(rowElement);
+      }
+
       this.element = rowElement;
       return rowElement;
     }
@@ -108,7 +112,7 @@
 
         Fliplet.Hooks.on('componentEvent', (eventData) => {
           // Render event from a child component
-          if (eventData.type === 'render' || eventData.target.parents({ widgetId: this.repeater.data.id }).length) {
+          if (eventData.type === 'render' || eventData.type === 'removed' || eventData.target.parents({ widgetId: this.repeater.data.id }).length) {
             this.onChangeDetected();
           }
         });
@@ -158,7 +162,15 @@
 
     onChangeDetected() {
       _.debounce(() => {
-        this.repeater.rowTemplate = this.element.cloneNode(true);
+        const rowElement = this.element.cloneNode(true);
+        const widgetInstances = rowElement.querySelectorAll('[data-fl-widget-instance]');
+        const placeholder = rowElement.querySelector('[data-view-placeholder]');
+
+        if (widgetInstances.length && placeholder) {
+          placeholder.remove();
+        }
+
+        this.repeater.rowTemplate = rowElement.innerHTML.trim();
         this.repeater.onTemplateChange();
       }, 200)();
     }
