@@ -46,7 +46,7 @@
   class ListRepeaterRow {
     constructor(repeater, row, index) {
       row.entryId = row.id;
-      row.dataSourceId = repeater.connection.id;
+      row.dataSourceId = repeater.connection?.id;
       this.repeater = repeater;
       this.row = row;
       this.index = index;
@@ -391,10 +391,6 @@
 
     onTemplateChange() {
       this.rowComponents.forEach((rowComponent, index) => {
-        if (index === 0) {
-          return;
-        }
-
         rowComponent.render();
       });
     }
