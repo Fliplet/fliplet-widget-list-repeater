@@ -130,8 +130,8 @@
     }
 
     onClick(event) {
-      // Prevent the click action if it's already handled by another event
-      if (!this.repeater.data.clickAction || event._handled) {
+      // Prevent the click action if it's already handled by another event or is a anchor link
+      if (!this.repeater.data.clickAction || event._handled || event.target.tagName === 'A') {
         return;
       }
 
@@ -335,7 +335,7 @@
         });
       } catch (error) {
         this.error = error;
-        console.error('[LIST REPEATER] Error fetching data', error);
+        console.error('[DATA LIST] Error fetching data', error);
 
         await Fliplet.Hooks.run('repeaterDataRetrieveError', {
           instance: this,
@@ -582,7 +582,7 @@
 
         if (!repeater) {
           if (options.ts > 5000) {
-            return Promise.reject('List repeater not found after ' + Math.ceil(options.ts / 1000) + ' seconds.');
+            return Promise.reject('Data list not found after ' + Math.ceil(options.ts / 1000) + ' seconds.');
           }
 
           return new Promise(function(resolve) {
