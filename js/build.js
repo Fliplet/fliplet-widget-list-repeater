@@ -46,7 +46,7 @@
   class ListRepeaterRow {
     constructor(repeater, row, index) {
       row.entryId = row.id;
-      row.dataSourceId = repeater.connection.id;
+      row.dataSourceId = repeater.connection?.id;
       this.repeater = repeater;
       this.row = row;
       this.index = index;
@@ -92,6 +92,10 @@
         });
       }
 
+      if (this.element) {
+        this.element.replaceWith(rowElement);
+      }
+
       this.element = rowElement;
       return rowElement;
     }
@@ -108,7 +112,7 @@
 
         Fliplet.Hooks.on('componentEvent', (eventData) => {
           // Render event from a child component
-          if (eventData.type === 'render' || eventData.target.parents({ widgetId: this.repeater.data.id }).length) {
+          if (eventData.type === 'render' || eventData.type === 'removed' || eventData.target.parents({ widgetId: this.repeater.data.id }).length) {
             this.onChangeDetected();
           }
         });
@@ -158,7 +162,15 @@
 
     onChangeDetected() {
       _.debounce(() => {
-        this.repeater.rowTemplate = this.element.cloneNode(true);
+        const rowElement = this.element.cloneNode(true);
+        const widgetInstances = rowElement.querySelectorAll('[data-fl-widget-instance]');
+        const placeholder = rowElement.querySelector('[data-view-placeholder]');
+
+        if (widgetInstances.length && placeholder) {
+          placeholder.remove();
+        }
+
+        this.repeater.rowTemplate = rowElement.innerHTML.trim();
         this.repeater.onTemplateChange();
       }, 200)();
     }
@@ -237,8 +249,16 @@
         filter: { package: 'com.fliplet.dynamic-container' }
       });
 
-      if (this.parent) {
-        this.parent = await Fliplet.DynamicContainer.get(this.parent.id);
+      if (!this.parent) {
+        Fliplet.UI.Toast('Please add this component inside a Data container');
+        return Promise.reject('Data list must be placed inside a Data container');
+      }
+
+      this.parent = await Fliplet.DynamicContainer.get(this.parent.id);
+
+      if (!this.parent || !this.parent.connection) {
+        Fliplet.UI.Toast('Please configure the Data container with a data source');
+        return Promise.reject('Data container is not properly configured');
       }
 
       // Initialize container
@@ -391,10 +411,6 @@
 
     onTemplateChange() {
       this.rowComponents.forEach((rowComponent, index) => {
-        if (index === 0) {
-          return;
-        }
-
         rowComponent.render();
       });
     }
