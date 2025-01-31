@@ -218,11 +218,23 @@
       this.parent = undefined;
       this.rowTemplatePaths = [];
       this.testDataObject = {};
+      this.pageSize = 10; // Initial page size
+      this.currentOffset = 0;
+      this.hasMoreData = true;
+      this.loadingIndicator = null;
+
+      this.element.classList.add(this.direction);
+      
+      // Create loading indicator
+      this.loadingIndicator = document.createElement('div');
+      this.loadingIndicator.className = 'list-repeater-loading hidden';
+      this.loadingIndicator.innerHTML = '<p class="text-center"><i class="fa fa-refresh fa-spin fa-fw"></i> Loading more...</p>';
+      this.element.appendChild(this.loadingIndicator);
 
       // Setup intersection observer for infinite scroll
       this.lastRowObserver = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
+          if (entry.isIntersecting && !this.isLoading && this.hasMoreData) {
             this.loadMore();
           }
         });
@@ -288,11 +300,7 @@
     }
 
     render() {
-      this.element.innerHTML = '';
-      this.element.classList.add(this.direction);
-
-      if (this.isLoading) {
-        this.element.innerHTML = '<p class="text-center"><i class="fa fa-refresh fa-spin fa-2x fa-fw"></i></p>';
+      if (!this.element) {
         return;
       }
 
@@ -306,17 +314,40 @@
         return;
       }
 
-      if (!this.rows || !this.rows.length) {
+      // Show loading indicator for both initial and subsequent loads
+      if (this.loadingIndicator) {
+        if (this.isLoading) {
+          this.loadingIndicator.classList.remove('hidden');
+        } else {
+          this.loadingIndicator.classList.add('hidden');
+        }
+      }
+
+      // For initial load with no data yet, just show the loader
+      if (!this.rows) {
+        return;
+      }
+
+      if (!this.rows.length) {
         this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
         return;
       }
 
-      // Render rows
-      this.rowComponents = this.rows.map((row, index) => {
-        const rowComponent = new ListRepeaterRow(this, row, index);
+      // Only render new rows
+      const startIndex = this.rowComponents.length;
+      const newRows = this.rows.slice(startIndex);
+
+      // Render new rows
+      newRows.forEach((row, index) => {
+        const rowComponent = new ListRepeaterRow(this, row, startIndex + index);
+        this.rowComponents.push(rowComponent);
         this.element.appendChild(rowComponent.element);
-        return rowComponent;
       });
+
+      // Make sure loading indicator is always at the bottom
+      if (this.loadingIndicator) {
+        this.element.appendChild(this.loadingIndicator);
+      }
     }
 
     async loadData() {
@@ -333,13 +364,30 @@
             instance: this,
             data: {
               where: this.getFilterQuery(),
-              sort: this.getSortOrder()
+              sort: this.getSortOrder(),
+              limit: this.pageSize,
+              offset: this.currentOffset
             }
           });
 
           const query = Object.assign({}, ...hookResult);
 
-          this.rows = await this.connection.find(query);
+          // Add pagination parameters
+          query.limit = this.pageSize;
+          query.offset = this.currentOffset;
+          query.includePagination = true;
+
+          const response = await this.connection.find(query);
+          
+          // Handle paginated response
+          if (response.entries) {
+            this.rows = this.rows || [];
+            this.rows.push(...response.entries);
+            this.hasMoreData = response.entries.length === this.pageSize;
+          } else {
+            this.rows = response;
+            this.hasMoreData = response.length === this.pageSize;
+          }
 
           if (this.rows.length && ['informed', 'live'].includes(this.data.updateType)) {
             this.subscribe();
@@ -366,6 +414,15 @@
         this.render();
         $(this.element).translate();
       }
+    }
+
+    async loadMore() {
+      if (this.isLoading || !this.hasMoreData) {
+        return;
+      }
+
+      this.currentOffset += this.pageSize;
+      await this.loadData();
     }
 
     subscribe(cursor) {
@@ -413,27 +470,6 @@
       this.rowComponents.forEach((rowComponent, index) => {
         rowComponent.render();
       });
-    }
-
-    loadMore() {
-      if (!this.rows || typeof this.rows.next !== 'function' || this.rows.isLastPage) {
-        return;
-      }
-
-      this.isLoading = true;
-      this.render();
-
-      this.rows.next()
-        .update({ keepExisting: true })
-        .then(() => {
-          this.isLoading = false;
-          this.render();
-        })
-        .catch(error => {
-          this.isLoading = false;
-          this.render();
-          Fliplet.UI.Toast.error(error, { message: 'Error loading data' });
-        });
     }
 
     onInsert(insertions = []) {
