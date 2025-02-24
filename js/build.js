@@ -362,7 +362,7 @@
 
           const baseQuery = {
             where: this.getFilterQuery(),
-            sort: this.getSortOrder(),
+            order: this.getSortOrder(),
             limit: this.pageSize,
             offset: this.currentOffset,
             includePagination: true
@@ -379,7 +379,7 @@
               ...acc,
               ...curr,
               where: { ...acc.where, ...curr.where },
-              sort: curr.sort || acc.sort
+              order: curr.order || acc.order
             };
           }, baseQuery);
 
@@ -613,10 +613,7 @@
     }
 
     getSortOrder() {
-      return (this.data.sorts || []).map(sort => ({
-        field: sort.field,
-        order: sort.order || 'asc'
-      }));
+      return (this.data.sorts || []).map(sort => [`data.${sort.field}`, sort.order || 'asc']);
     }
 
     setupEventListeners() {
