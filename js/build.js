@@ -360,28 +360,22 @@
         } else if (this.parent && typeof this.parent.connection === 'function') {
           this.connection = await this.parent.connection();
 
-          const baseQuery = {
-            where: this.getFilterQuery(),
-            order: this.getSortOrder(),
-            limit: this.pageSize,
-            offset: this.currentOffset,
-            includePagination: true
-          };
-
           const hookResult = await Fliplet.Hooks.run('repeaterBeforeRetrieveData', {
             instance: this,
-            data: baseQuery
+            data: {
+              where: this.getFilterQuery(),
+              sort: this.getSortOrder(),
+              limit: this.pageSize,
+              offset: this.currentOffset
+            }
           });
 
-          // Merge hook results with base query
-          const query = hookResult.reduce((acc, curr) => {
-            return {
-              ...acc,
-              ...curr,
-              where: { ...acc.where, ...curr.where },
-              order: curr.order || acc.order
-            };
-          }, baseQuery);
+          const query = Object.assign({}, ...hookResult);
+
+          // Add pagination parameters
+          query.limit = this.pageSize;
+          query.offset = this.currentOffset;
+          query.includePagination = true;
 
           const response = await this.connection.find(query);
           
@@ -578,31 +572,11 @@
             value = filter.value;
         }
 
-        // Skip if value is undefined
         if (typeof value === 'undefined') {
           return;
         }
 
-        // Handle different operators
-        switch (filter.logic) {
-          case 'empty':
-            query[filter.field] = null;
-            break;
-          case 'notempty':
-            query[filter.field] = { $ne: null };
-            break;
-          case '!=':
-            query[filter.field] = { $ne: value };
-            break;
-          case 'contains':
-            query[filter.field] = { $ilike: `%${value}%` };
-            break;
-          case 'notcontain':
-            query[filter.field] = { $not: { $ilike: `%${value}%` } };
-            break;
-          default: // equals
-            query[filter.field] = value;
-        }
+        query[filter.column] = value;
       });
 
       return query;
@@ -613,7 +587,10 @@
     }
 
     getSortOrder() {
-      return (this.data.sorts || []).map(sort => [`data.${sort.field}`, sort.order || 'asc']);
+      return (this.data.sorts || []).map(sort => ({
+        column: sort.field,
+        order: sort.order || 'asc'
+      }));
     }
 
     setupEventListeners() {
