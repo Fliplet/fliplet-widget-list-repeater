@@ -595,10 +595,10 @@
             query[filter.field] = { $ne: value };
             break;
           case 'contains':
-            query[filter.field] = { $ilike: `%${value}%` };
+            query[filter.field] = { $iLike: `%${value}%` };
             break;
           case 'notcontain':
-            query[filter.field] = { $not: { $ilike: `%${value}%` } };
+            query[filter.field] = { $not: { $iLike: `%${value}%` } };
             break;
           default: // equals
             query[filter.field] = value;
