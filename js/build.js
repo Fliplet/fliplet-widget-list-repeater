@@ -129,6 +129,53 @@
       }
 
       Fliplet.Widget.initializeChildren(this.element, this).then(() => {
+        // Initialize specific container widgets and their dropzones in all rows
+        if (isInteract && !this.isEditableRow) {
+          // Find all container components in this row
+          const containerElements = this.element.querySelectorAll('[data-widget-package="com.fliplet.container"]');
+          
+          // Initialize ViewContainer for each container to enable proper dropzones
+          containerElements.forEach(containerEl => {
+            // Only create ViewContainer if the element has data-view attribute
+            if (containerEl.hasAttribute('data-view')) {
+              // Make sure the container has the necessary attributes for Studio tree visibility
+              if (!containerEl.hasAttribute('data-node-name')) {
+                containerEl.setAttribute('data-node-name', 'Container');
+              }
+              
+              // Ensure the container has a label if needed
+              if (!containerEl.hasAttribute('data-fl-label')) {
+                containerEl.setAttribute('data-fl-label', 'Container');
+              }
+              
+              containerEl._viewContainer = new Fliplet.Interact.ViewContainer(containerEl, {
+                placeholder: '<div data-view-placeholder>Drag and drop components here</div>'
+              });
+              
+              // Ensure widget instance is registered
+              const instanceId = containerEl.getAttribute('data-fl-widget-instance');
+              if (instanceId) {
+                // Force a widget registration if needed
+                Fliplet.Widget.initiate({
+                  name: 'container',
+                  selector: `[data-fl-widget-instance="${instanceId}"]`,
+                  inRow: this.row.id
+                });
+                
+                // Notify Studio about this container to ensure it's visible in the tree
+                Fliplet.Studio.emit('component-in-viewport', {
+                  id: instanceId,
+                  uuid: containerEl.getAttribute('data-fl-widget-uuid'),
+                  name: 'Container'
+                });
+                
+                // Update DOM to ensure Studio picks up on the changes
+                Fliplet.Studio.emit('update-dom');
+              }
+            }
+          });
+        }
+        
         Fliplet.Hooks.run('listRepeaterRowReady', { instance: this.repeater, row: this });
       });
     }
@@ -190,6 +237,18 @@
       if (this.viewContainer) {
         this.viewContainer.destroy();
       }
+      
+      // Clean up ViewContainer instances for container widgets
+      if (isInteract && !this.isEditableRow) {
+        const containerElements = this.element.querySelectorAll('[data-widget-package="com.fliplet.container"]');
+        containerElements.forEach(containerEl => {
+          // ViewContainers might be attached as a property to the element
+          if (containerEl._viewContainer) {
+            containerEl._viewContainer.destroy();
+          }
+        });
+      }
+      
       Fliplet.Widget.destroyChildren(this.element);
       this.element.remove();
     }
