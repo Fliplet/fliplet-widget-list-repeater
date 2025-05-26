@@ -69,7 +69,7 @@
       const rowElement = document.createElement('fl-list-repeater-row');
       rowElement.setAttribute('data-row-id', this.row.id);
       rowElement.setAttribute('data-key', this.key);
-      
+
       Object.entries(this.attrs).forEach(([key, value]) => {
         if (value !== undefined) {
           rowElement.setAttribute(key, value);
@@ -180,7 +180,7 @@
       this.entry = row;
       this.key = getRowKey(row);
       this.render();
-      
+
       Fliplet.Widget.initializeChildren(this.element, this).then(() => {
         Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: this.repeater, row: this });
       });
@@ -224,7 +224,7 @@
       this.loadingIndicator = null;
 
       this.element.classList.add(this.direction);
-      
+
       // Create loading indicator
       this.loadingIndicator = document.createElement('div');
       this.loadingIndicator.className = 'list-repeater-loading hidden';
@@ -384,7 +384,7 @@
           }, baseQuery);
 
           const response = await this.connection.find(query);
-          
+
           // Handle paginated response
           if (response.entries) {
             this.rows = this.rows || [];
@@ -474,6 +474,9 @@
 
     onTemplateChange() {
       this.rowComponents.forEach((rowComponent, index) => {
+        if (index === 0) {
+          return;
+        }
         rowComponent.render();
       });
     }
