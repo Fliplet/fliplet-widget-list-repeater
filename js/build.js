@@ -77,7 +77,7 @@
       });
 
       if (isInteract && !this.isEditableRow) {
-        rowElement.classList.add('disabled');
+        rowElement.classList.add('readonly');
       }
 
       rowElement.innerHTML = this.repeater.rowTemplate || (isInteract ? this.repeater.emptyTemplate : '');
