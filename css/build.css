@@ -51,8 +51,8 @@ fl-list-repeater-row.disabled > [data-view-placeholder] {
   color: #6a6868 !important;
   font-family: "Open Sans", sans-serif !important;
   font-size: 12px !important;
-  padding: 15px !important;
-  text-align: center !important;
+  padding: 15px;
+  text-align: center;
 }
 
 .component-error-before::before {

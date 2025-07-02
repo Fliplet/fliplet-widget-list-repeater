@@ -164,10 +164,10 @@
       _.debounce(() => {
         const rowElement = this.element.cloneNode(true);
         const widgetInstances = rowElement.querySelectorAll('[data-fl-widget-instance]');
-        const placeholder = rowElement.querySelector('[data-view-placeholder]');
+        const placeholder = this.element.querySelector('[data-view-placeholder]');
 
         if (widgetInstances.length && placeholder) {
-          placeholder.remove();
+            placeholder.remove();
         }
 
         this.repeater.rowTemplate = rowElement.innerHTML.trim();
@@ -475,6 +475,8 @@
     onTemplateChange() {
       this.rowComponents.forEach((rowComponent, index) => {
         if (index === 0) {
+          rowComponent.element.style.padding = '0';
+          rowComponent.element.style.textAlign = 'left';
           return;
         }
         rowComponent.render();
