@@ -26,14 +26,14 @@ fl-list-repeater-row {
   border: none;
 }
 
-.mode-interact fl-list-repeater-row.readonly {
+.mode-interact fl-list-repeater-row.disabled {
   background-color: rgba(126, 126, 126, 0.2);
   pointer-events: none;
   opacity: 0.5;
 }
 
-.mode-interact [draggable="true"] fl-list-repeater-row.readonly [draggable="true"],
-.mode-interact fl-list-repeater-row.readonly [data-widget-package="com.fliplet.text"] > * {
+.mode-interact [draggable="true"] fl-list-repeater-row.disabled [draggable="true"],
+.mode-interact fl-list-repeater-row.disabled [data-widget-package="com.fliplet.text"] > * {
   pointer-events: none !important;
 }
 
@@ -42,21 +42,21 @@ fl-list-repeater-row > [data-view-placeholder] {
   padding: 15px;
 }
 
-fl-list-repeater-row.readonly > [data-view-placeholder] {
+fl-list-repeater-row.disabled > [data-view-placeholder] {
   opacity: 0;
 }
 
 .mode-interact .fl-view-empty {
-  border: 1px dotted #D4D4D4!important;
-  color: #6A6868!important;
-  font-family: "Open Sans", sans-serif!important;
-  font-size: 12px!important;
-  padding: 15px!important;
-  text-align: center!important;
+  border: 1px dotted #d4d4d4 !important;
+  color: #6a6868 !important;
+  font-family: "Open Sans", sans-serif !important;
+  font-size: 12px !important;
+  padding: 15px;
+  text-align: center;
 }
 
 .component-error-before::before {
-  content: 'Incorrect component placement' !important;
+  content: "Incorrect component placement" !important;
 }
 
 .component-error-before:before {
