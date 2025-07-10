@@ -530,8 +530,10 @@
           this.pendingUpdates.deleted.push(deletion);
         }
 
-        const deletedEntriesKey = 'deleted-entries-' + this.rows[0].dataSourceId;
-        localStorage.removeItem(deletedEntriesKey);
+        if (this.rows?.length) {
+          const deletedEntriesKey = `deleted-entries-${this.rows[0].dataSourceId}`;
+          localStorage.removeItem(deletedEntriesKey);
+        }
       });
     }
 
