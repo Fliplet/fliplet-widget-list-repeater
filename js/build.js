@@ -418,11 +418,6 @@
       } finally {
         this.isLoading = false;
         this.render();
-        setTimeout(() => {
-          if(this.element.innerText === '') {
-            this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
-          }
-        }, 0);
         $(this.element).translate();
       }
     }
