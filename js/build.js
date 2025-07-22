@@ -180,6 +180,7 @@
       this.entry = row;
       this.key = getRowKey(row);
       this.render();
+      this.setupEventListeners();
 
       Fliplet.Widget.initializeChildren(this.element, this).then(() => {
         Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: this.repeater, row: this });
@@ -418,11 +419,6 @@
       } finally {
         this.isLoading = false;
         this.render();
-        setTimeout(() => {
-          if(this.element.innerText === '') {
-            this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
-          }
-        }, 0);
         $(this.element).translate();
       }
     }
@@ -529,11 +525,6 @@
         if (!this.pendingUpdates.deleted.includes(deletion)) {
           this.pendingUpdates.deleted.push(deletion);
         }
-
-        if (this.rows?.length) {
-          const deletedEntriesKey = `deleted-entries-${this.rows[0].dataSourceId}`;
-          localStorage.removeItem(deletedEntriesKey);
-        }
       });
     }
 
@@ -568,6 +559,11 @@
         updated: [],
         deleted: []
       };
+
+      if (this.rows?.length) {
+        const deletedEntriesKey = `deleted-entries-${this.rows[0].dataSourceId}`;
+        localStorage.removeItem(deletedEntriesKey);
+      }
 
       this.render();
     }
