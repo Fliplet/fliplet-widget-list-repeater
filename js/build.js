@@ -562,7 +562,11 @@
 
       if (this.rows?.length) {
         const deletedEntriesKey = `deleted-entries-${this.rows[0].dataSourceId}`;
-        localStorage.removeItem(deletedEntriesKey);
+        try {
+          localStorage.removeItem(deletedEntriesKey);
+        } catch (error) {
+          console.warn('Failed to remove localStorage key:', deletedEntriesKey, error);
+        }
       }
 
       this.render();
