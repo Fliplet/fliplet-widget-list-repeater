@@ -180,6 +180,7 @@
       this.entry = row;
       this.key = getRowKey(row);
       this.render();
+      this.setupEventListeners();
 
       Fliplet.Widget.initializeChildren(this.element, this).then(() => {
         Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: this.repeater, row: this });
@@ -432,6 +433,10 @@
     }
 
     subscribe(cursor) {
+      if (this.subscription) {
+        this.subscription.unsubscribe();
+      }
+
       const events = ['insert', 'update', 'delete'];
 
       this.subscription = this.connection.subscribe(
@@ -502,7 +507,7 @@
     onDelete(deletions = []) {
       deletions.forEach(deletion => {
         // Remove from inserted if present
-        const insertedIndex = this.pendingUpdates.inserted.findIndex(row => row.id === deletion.id);
+        const insertedIndex = this.pendingUpdates.inserted.findIndex(row => row.id === deletion);
 
         if (insertedIndex !== -1) {
           this.pendingUpdates.inserted.splice(insertedIndex, 1);
@@ -510,15 +515,15 @@
         }
 
         // Remove from updated if present
-        const updatedIndex = this.pendingUpdates.updated.findIndex(row => row.id === deletion.id);
+        const updatedIndex = this.pendingUpdates.updated.findIndex(row => row.id === deletion);
 
         if (updatedIndex !== -1) {
           this.pendingUpdates.updated.splice(updatedIndex, 1);
         }
 
         // Finally, add to deleted if not already there and not in inserted
-        if (!this.pendingUpdates.deleted.includes(deletion.id)) {
-          this.pendingUpdates.deleted.push(deletion.id);
+        if (!this.pendingUpdates.deleted.includes(deletion)) {
+          this.pendingUpdates.deleted.push(deletion);
         }
       });
     }
@@ -554,6 +559,15 @@
         updated: [],
         deleted: []
       };
+
+      if (this.rows?.length) {
+        const deletedEntriesKey = `deleted-entries-${this.rows[0].dataSourceId}`;
+        try {
+          localStorage.removeItem(deletedEntriesKey);
+        } catch (error) {
+          console.warn('Failed to remove localStorage key:', deletedEntriesKey, error);
+        }
+      }
 
       this.render();
     }
