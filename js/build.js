@@ -440,7 +440,7 @@
       if (this.subscription) {
         this.subscription.unsubscribe();
       }
-      
+
       const events = ['insert', 'update', 'delete'];
 
       this.subscription = this.connection.subscribe(
@@ -564,7 +564,7 @@
         deleted: []
       };
 
-     if (this.rows?.length) {
+      if (this.rows?.length) {
         const deletedEntriesKey = `deleted-entries-${this.rows[0].dataSourceId}`;
         try {
           localStorage.removeItem(deletedEntriesKey);
@@ -572,7 +572,7 @@
           console.warn('Failed to remove localStorage key:', deletedEntriesKey, error);
         }
       }
-      
+
       this.render();
     }
 
