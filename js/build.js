@@ -180,7 +180,6 @@
       this.entry = row;
       this.key = getRowKey(row);
       this.render();
-      this.setupEventListeners();
 
       Fliplet.Widget.initializeChildren(this.element, this).then(() => {
         Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: this.repeater, row: this });
@@ -419,6 +418,11 @@
       } finally {
         this.isLoading = false;
         this.render();
+        setTimeout(() => {
+          if(this.element.innerText === '') {
+            this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
+          }
+        }, 0);
         $(this.element).translate();
       }
     }
@@ -433,10 +437,6 @@
     }
 
     subscribe(cursor) {
-      if (this.subscription) {
-        this.subscription.unsubscribe();
-      }
-
       const events = ['insert', 'update', 'delete'];
 
       this.subscription = this.connection.subscribe(
@@ -507,7 +507,7 @@
     onDelete(deletions = []) {
       deletions.forEach(deletion => {
         // Remove from inserted if present
-        const insertedIndex = this.pendingUpdates.inserted.findIndex(row => row.id === deletion);
+        const insertedIndex = this.pendingUpdates.inserted.findIndex(row => row.id === deletion.id);
 
         if (insertedIndex !== -1) {
           this.pendingUpdates.inserted.splice(insertedIndex, 1);
@@ -515,15 +515,15 @@
         }
 
         // Remove from updated if present
-        const updatedIndex = this.pendingUpdates.updated.findIndex(row => row.id === deletion);
+        const updatedIndex = this.pendingUpdates.updated.findIndex(row => row.id === deletion.id);
 
         if (updatedIndex !== -1) {
           this.pendingUpdates.updated.splice(updatedIndex, 1);
         }
 
         // Finally, add to deleted if not already there and not in inserted
-        if (!this.pendingUpdates.deleted.includes(deletion)) {
-          this.pendingUpdates.deleted.push(deletion);
+        if (!this.pendingUpdates.deleted.includes(deletion.id)) {
+          this.pendingUpdates.deleted.push(deletion.id);
         }
       });
     }
@@ -559,15 +559,6 @@
         updated: [],
         deleted: []
       };
-
-      if (this.rows?.length) {
-        const deletedEntriesKey = `deleted-entries-${this.rows[0].dataSourceId}`;
-        try {
-          localStorage.removeItem(deletedEntriesKey);
-        } catch (error) {
-          console.warn('Failed to remove localStorage key:', deletedEntriesKey, error);
-        }
-      }
 
       this.render();
     }
