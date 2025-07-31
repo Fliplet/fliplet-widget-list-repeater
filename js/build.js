@@ -180,6 +180,7 @@
       this.entry = row;
       this.key = getRowKey(row);
       this.render();
+      this.setupEventListeners();
 
       Fliplet.Widget.initializeChildren(this.element, this).then(() => {
         Fliplet.Hooks.run('listRepeaterRowUpdated', { instance: this.repeater, row: this });
@@ -418,11 +419,6 @@
       } finally {
         this.isLoading = false;
         this.render();
-        setTimeout(() => {
-          if(this.element.innerText === '') {
-            this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
-          }
-        }, 0);
         $(this.element).translate();
       }
     }
@@ -437,6 +433,10 @@
     }
 
     subscribe(cursor) {
+      if (this.subscription) {
+        this.subscription.unsubscribe();
+      }
+
       const events = ['insert', 'update', 'delete'];
 
       this.subscription = this.connection.subscribe(
