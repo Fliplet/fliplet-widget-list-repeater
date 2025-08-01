@@ -165,8 +165,9 @@
         const rowElement = this.element.cloneNode(true);
         const widgetInstances = rowElement.querySelectorAll('[data-fl-widget-instance]');
         const placeholder = this.element.querySelector('[data-view-placeholder]');
+        const isConditionalContainerPlaceholder = placeholder && placeholder.textContent.trim().includes('Conditional container');
 
-        if (widgetInstances.length && placeholder) {
+        if (widgetInstances.length && placeholder && !isConditionalContainerPlaceholder) {
             placeholder.remove();
         }
 
@@ -422,11 +423,6 @@
       } finally {
         this.isLoading = false;
         this.render();
-        setTimeout(() => {
-          if(this.element.innerText === '') {
-            this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
-          }
-        }, 0);
         $(this.element).translate();
       }
     }
