@@ -328,10 +328,14 @@
         return;
       }
 
-      if (!this.rows.length) {
-        this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
-        return;
-      }
+      requestAnimationFrame(() => {
+        const rowElements = this.element.querySelectorAll('fl-list-repeater-row');
+        const allRowsEmpty = Array.from(rowElements).every(row => row.children.length === 0);
+        if (!isInteract && (rowElements.length === 0 || allRowsEmpty)) {
+          this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
+        }
+        return
+      });
 
       // Only render new rows
       const startIndex = this.rowComponents.length;
