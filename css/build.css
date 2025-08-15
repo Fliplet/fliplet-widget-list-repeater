@@ -1,3 +1,7 @@
+[data-widget-package="com.fliplet.list-repeater"] {
+  width: 100%;
+}
+
 fl-list-repeater {
   display: flex;
 }
@@ -16,6 +20,10 @@ fl-list-repeater .list-repeater-load-error {
 
 fl-list-repeater-row {
   position: relative;
+  word-break: break-word;
+  display: block;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .mode-interact fl-list-repeater-row[data-view] {
