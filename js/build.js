@@ -450,7 +450,7 @@
 
       let globalSocialActionsDSConnection;
       try {
-        globalSocialActionsDSConnection = await Fliplet.DataSources.connect(globalSocialActionsDS.id)
+        globalSocialActionsDSConnection = await Fliplet.DataSources.connect(globalSocialActionsDS.id);
       } catch (error) {
         console.error('[ListRepeater] Failed to connect to Social Actions data source', error);
         return;
