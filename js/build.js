@@ -165,9 +165,10 @@
         const rowElement = this.element.cloneNode(true);
         const widgetInstances = rowElement.querySelectorAll('[data-fl-widget-instance]');
         const placeholder = this.element.querySelector('[data-view-placeholder]');
+        const isConditionalContainerPlaceholder = placeholder && placeholder.textContent.trim().includes('Conditional container');
 
-        if (widgetInstances.length && placeholder) {
-            placeholder.remove();
+        if (widgetInstances.length && placeholder && !isConditionalContainerPlaceholder) {
+          placeholder.remove();
         }
 
         this.repeater.rowTemplate = rowElement.innerHTML.trim();
@@ -329,10 +330,14 @@
         return;
       }
 
-      if (!this.rows.length) {
-        this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
-        return;
-      }
+      requestAnimationFrame(() => {
+        const rowElements = this.element.querySelectorAll('fl-list-repeater-row');
+        const allRowsEmpty = Array.from(rowElements).every(row => row.children.length === 0);
+        if (!isInteract && (rowElements.length === 0 || allRowsEmpty)) {
+          this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
+        }
+        return
+      });
 
       // Only render new rows
       const startIndex = this.rowComponents.length;
@@ -605,10 +610,10 @@
             query[filter.field] = { $ne: value };
             break;
           case 'contains':
-            query[filter.field] = { $iLike: `%${value}%` };
+            query[filter.field] = { $iLike: value };
             break;
           case 'notcontain':
-            query[filter.field] = { $not: { $iLike: `%${value}%` } };
+            query[filter.field] = { $not: { $iLike: value } };
             break;
           default: // equals
             query[filter.field] = value;
