@@ -165,7 +165,6 @@
         const rowElement = this.element.cloneNode(true);
         const widgetInstances = rowElement.querySelectorAll('[data-fl-widget-instance]');
         const placeholder = this.element.querySelector('[data-view-placeholder]');
-        const isConditionalContainerPlaceholder = placeholder && placeholder.textContent.trim().includes('Conditional container');
 
         if (widgetInstances.length && placeholder && !isConditionalContainerPlaceholder) {
           placeholder.remove();

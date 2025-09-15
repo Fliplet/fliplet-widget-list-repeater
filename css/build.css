@@ -38,7 +38,6 @@ fl-list-repeater-row {
   background-color: rgba(126, 126, 126, 0.2);
   pointer-events: none;
   opacity: 0.5;
-  width: 100%;
 }
 
 .mode-interact [draggable="true"] fl-list-repeater-row.disabled [draggable="true"],
