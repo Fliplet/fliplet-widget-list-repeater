@@ -166,7 +166,7 @@
         const widgetInstances = rowElement.querySelectorAll('[data-fl-widget-instance]');
         const placeholder = this.element.querySelector('[data-view-placeholder]');
 
-        if (widgetInstances.length && placeholder && !isConditionalContainerPlaceholder) {
+        if (widgetInstances.length && placeholder) {
           placeholder.remove();
         }
 
