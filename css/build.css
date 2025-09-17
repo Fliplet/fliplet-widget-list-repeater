@@ -1,3 +1,7 @@
+[data-widget-package="com.fliplet.list-repeater"] {
+  width: 100%;
+}
+
 fl-list-repeater {
   display: flex;
 }
@@ -20,7 +24,6 @@ fl-list-repeater-row {
   display: block;
   white-space: normal;
   overflow-wrap: break-word;
-  width: fit-content;
 }
 
 .mode-interact fl-list-repeater-row[data-view] {
@@ -35,7 +38,6 @@ fl-list-repeater-row {
   background-color: rgba(126, 126, 126, 0.2);
   pointer-events: none;
   opacity: 0.5;
-  width: 100%;
 }
 
 .mode-interact [draggable="true"] fl-list-repeater-row.disabled [draggable="true"],
