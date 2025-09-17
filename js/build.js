@@ -168,7 +168,7 @@
         const isConditionalContainerPlaceholder = placeholder && placeholder.textContent.trim().includes('Conditional container');
 
         if (widgetInstances.length && placeholder && !isConditionalContainerPlaceholder) {
-            placeholder.remove();
+          placeholder.remove();
         }
 
         this.repeater.rowTemplate = rowElement.innerHTML.trim();
