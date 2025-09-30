@@ -49,7 +49,7 @@ Fliplet.ListRepeater.get('foo')
 The `container` instance variable above is a `Vue` compatible instance with the following properties available:
 
 - `direction`: `vertical` or `horizontal`
-- `rows`: Cursor object for the Data Source with array-like behavior (supports `length`, index access) and pagination methods like `next()` and `update()`
+- `rows`: `Array` from the parent context
 - `el`: DOM Element
 - `template`: the list row template
 
@@ -119,53 +119,40 @@ Fliplet.Hooks.on('repeaterDataRetrieveError', function(result) {
 
 ---
 
-## Infinite scroll
+## Add infinite scroll to a list
 
-The list repeater now includes built-in infinite scrolling powered by the Intersection Observer API. It automatically loads the next page when the second-to-last rendered row becomes visible.
+Here's a simple example on how you can add infinite scroll to a list using a Data container and a list repeater with a limit set up to 10 entries per page.
 
-- You don't need to add any window scroll listeners.
-- The widget keeps existing entries as new pages are loaded for a smooth UX.
-
-If you need manual control (e.g., trigger a load from custom UI), you can still advance the cursor:
+The following code will load the next page of the dataset when the user is approaching the end of the screen:
 
 ```js
-Fliplet.ListRepeater.get().then(function (repeater) {
-  // Move to the next page of the dataset and keep existing entries
-  repeater.rows.next().update({ keepExisting: true });
-});
-```
+// Attach a jQuery event on window scroll
+$(window).on('scroll', _.throttle(updatePosition, 200));
 
-If you are paginating (changing pages rather than appending), call `update()` without `keepExisting` and refresh as needed:
-
-```js
-Fliplet.ListRepeater.get().then(function (repeater) {
-  repeater.rows.next().update();
-  repeater.$forceUpdate && repeater.$forceUpdate();
-});
-```
-
----
-
-## Cursor fallback to offset pagination
-
-This widget prefers cursor-based pagination for efficiency. If creating the cursor fails (e.g., environment or permission constraints), it automatically falls back to offset-based pagination using `find({ limit, offset })` under the hood.
-
-- **Behavior**:
-  - Initial load tries `findWithCursor(query)`.
-  - On failure, switches to offset mode and performs `find({ ...query, limit, offset: 0 })`.
-  - Infinite scrolling continues by incrementing `offset` by `limit` and appending results.
-  - `hasMoreData` is computed from whether the last page returned `limit` items.
-
-- **Manual loading in offset mode**:
-
-```js
-Fliplet.ListRepeater.get().then(function (repeater) {
-  if (repeater._isOffsetMode) {
-    // Triggers the same internal logic as the Intersection Observer
-    repeater.loadMore();
-  } else {
-    // Cursor mode
-    repeater.rows.next().update({ keepExisting: true });
+function updatePosition() {
+  // Check if the user is approaching the end of the screen (200px from the bottom)
+  if ($(window).scrollTop() + $(window).height() >= ($(document).height() - 200)) {
+    loadMore();
   }
+}
+
+// Function to load the next page of the dataset
+function loadMore() {
+  Fliplet.ListRepeater.get().then(function (repeater) {
+    // Move to the next page of the dataset and keep existing entries in the cursor
+    repeater.rows.next().update({ keepExisting: true });
+  });
+}
+```
+
+On the other hand, if you're paginating a list (e.g. moving the cursor between pages), you may need to manually refresh the data list:
+
+```js
+Fliplet.ListRepeater.get().then(function (repeater) {
+  // Move to the next page of the dataset
+  repeater.rows.next().update();
+
+  // Force the repeater to redraw the list
+  repeater.$forceUpdate();
 });
 ```
