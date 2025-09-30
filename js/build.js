@@ -178,8 +178,9 @@
         });
       }
 
-      // Observe when the last row element is in view
-      if (this.element?.nodeType === Node.ELEMENT_NODE && this.index === this.repeater.rows.length - 1) {
+      // Observe when the second-to-last row element is in view
+      const triggerIndex = Math.max(0, this.repeater.rows.length - 2);
+      if (this.element?.nodeType === Node.ELEMENT_NODE && this.index === triggerIndex) {
         this.repeater.lastRowObserver.observe(this.element);
       }
 
@@ -275,10 +276,17 @@
       this.parent = undefined;
       this.rowTemplatePaths = [];
       this.testDataObject = {};
-      this.pageSize = 10; // Initial page size
-      this.currentOffset = 0;
       this.hasMoreData = true;
       this.loadingIndicator = null;
+      this.errorIndicator = null;
+      this.loadMoreError = undefined;
+      // Offset-based pagination fallback state
+      // When cursor-based pagination is unavailable, we switch to offset mode
+      // and track current offset and page size to continue infinite scrolling.
+      this._isOffsetMode = false;
+      this._offset = 0;
+      this._pageSize = data.pageSize || 10;
+      this._lastQuery = undefined;
 
       this.element.classList.add(this.direction);
 
@@ -287,6 +295,26 @@
       this.loadingIndicator.className = 'list-repeater-loading hidden';
       this.loadingIndicator.innerHTML = '<p class="text-center"><i class="fa fa-refresh fa-spin fa-fw"></i> Loading more...</p>';
       this.element.appendChild(this.loadingIndicator);
+
+      // Create inline error indicator for load-more failures
+      this.errorIndicator = document.createElement('div');
+      this.errorIndicator.className = 'list-repeater-error hidden';
+      this.errorIndicator.innerHTML = '<p class="text-center">Couldn\u2019t load more. <a href="#" data-retry>Retry</a></p>';
+      this.element.appendChild(this.errorIndicator);
+
+      // Retry handler
+      this.errorIndicator.addEventListener('click', (event) => {
+        const target = event.target;
+        if (target && target.matches('a[data-retry]')) {
+          event.preventDefault();
+          if (this.isLoading) {
+            return;
+          }
+          this.loadMoreError = undefined;
+          this.render();
+          this.loadMore();
+        }
+      });
 
       // Setup intersection observer for infinite scroll
       this.lastRowObserver = new IntersectionObserver((entries) => {
@@ -380,6 +408,15 @@
         }
       }
 
+      // Show inline error for load-more failures
+      if (this.errorIndicator) {
+        if (!this.isLoading && this.loadMoreError) {
+          this.errorIndicator.classList.remove('hidden');
+        } else {
+          this.errorIndicator.classList.add('hidden');
+        }
+      }
+
       // For initial load with no data yet, just show the loader
       if (!this.rows) {
         return;
@@ -399,6 +436,11 @@
         }
       });
 
+      // Disconnect previous observers for second-to-last elements before rendering
+      if (this.lastRowObserver) {
+        this.lastRowObserver.disconnect();
+      }
+
       // Only render new rows
       const startIndex = this.rowComponents.length;
       const newRows = this.rows.slice(startIndex);
@@ -413,6 +455,17 @@
       // Make sure loading indicator is always at the bottom
       if (this.loadingIndicator) {
         this.element.appendChild(this.loadingIndicator);
+      }
+
+      // Ensure error indicator sits at the bottom as well
+      if (this.errorIndicator) {
+        this.element.appendChild(this.errorIndicator);
+      }
+
+      // After rendering new rows, re-establish observer on new second-to-last element
+      const triggerIndex = Math.max(0, this.rowComponents.length - 2);
+      if (this.rowComponents[triggerIndex]?.element) {
+        this.lastRowObserver.observe(this.rowComponents[triggerIndex].element);
       }
     }
 
@@ -490,15 +543,14 @@
       try {
         if (isInteract) {
           this.rows = sampleData;
+          this.hasMoreData = false;
         } else if (this.parent && typeof this.parent.connection === 'function') {
           this.connection = await this.parent.connection();
 
           const baseQuery = {
             where: this.getFilterQuery(),
             order: this.getSortOrder(),
-            limit: this.pageSize,
-            offset: this.currentOffset,
-            includePagination: true
+            limit: this.data.pageSize || 10
           };
 
           const hookResult = await Fliplet.Hooks.run('repeaterBeforeRetrieveData', {
@@ -515,21 +567,45 @@
               order: curr.order || acc.order
             };
           }, baseQuery);
+          try {
+            // Initialize or update cursor-based pagination
+            if (!this.rows) {
+              // Initial load - create cursor
+              this.rows = await this.connection.findWithCursor(query);
+              if (!this.rows || typeof this.rows.next !== 'function') {
+                throw new Error('Failed to create data cursor');
+              }
+              this.hasMoreData = !this.rows.isLastPage;
 
-          const response = await this.connection.find(query);
+              if (this.rows.length && ['informed', 'live'].includes(this.data.updateType)) {
+                this.subscribe(this.rows);
+              }
+            } else {
+              // Subsequent updates (e.g. reloading same query) keep existing
+              await this.rows.update({ keepExisting: true });
+              this.hasMoreData = !this.rows.isLastPage;
+            }
+          } catch (error) {
+            // Fallback to offset-based pagination if cursor fails
+            console.warn('Cursor-based pagination failed, falling back to offset-based', error);
+            // Implement fallback logic
+            try {
+              // Enable offset mode and remember the last query without limit/offset changes
+              this._isOffsetMode = true;
+              this._lastQuery = { ...query };
 
-          // Handle paginated response
-          if (response.entries) {
-            this.rows = this.rows || [];
-            this.rows.push(...response.entries);
-            this.hasMoreData = response.entries.length === this.pageSize;
-          } else {
-            this.rows = response;
-            this.hasMoreData = response.length === this.pageSize;
-          }
+              // Initial fetch with classic find using offset/limit
+              const offsetQuery = { ...this._lastQuery, limit: this._pageSize, offset: 0 };
+              const results = await this.connection.find(offsetQuery);
 
-          if (this.rows.length && ['informed', 'live'].includes(this.data.updateType)) {
-            this.subscribe();
+              this.rows = Array.isArray(results) ? results : [];
+              this._offset = this.rows.length;
+              this.hasMoreData = this.rows.length === this._pageSize;
+            } catch (fallbackError) {
+              // If fallback also fails, surface original error context
+              console.error('[ListRepeater] Offset-based fallback failed', fallbackError);
+              throw fallbackError;
+            }
           }
         }
         this.render();
@@ -555,12 +631,37 @@
     }
 
     async loadMore() {
-      if (this.isLoading || !this.hasMoreData) {
+      if (this.isLoading || !this.hasMoreData || !this.rows) {
         return;
       }
 
-      this.currentOffset += this.pageSize;
-      await this.loadData();
+      this.isLoading = true;
+      this.loadMoreError = undefined;
+      this.render();
+
+      try {
+        if (this._isOffsetMode) {
+          // Offset-based pagination: request next page using stored query
+          const nextQuery = { ...this._lastQuery, limit: this._pageSize, offset: this._offset };
+          const nextResults = await this.connection.find(nextQuery);
+
+          const newItems = Array.isArray(nextResults) ? nextResults : [];
+          this.rows.push(...newItems);
+          this._offset += newItems.length;
+          this.hasMoreData = newItems.length === this._pageSize;
+          this.render();
+        } else {
+          await this.rows.next().update({ keepExisting: true });
+          this.hasMoreData = !this.rows.isLastPage;
+          this.render();
+        }
+      } catch (error) {
+        this.loadMoreError = error;
+        console.error('[DATA LIST] Error loading more data', error);
+      } finally {
+        this.isLoading = false;
+        this.render();
+      }
     }
 
     subscribe(cursor) {
