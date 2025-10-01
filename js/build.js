@@ -280,6 +280,9 @@
       this.loadingIndicator = null;
       this.errorIndicator = null;
       this.loadMoreError = undefined;
+      // Ensure retries do not skip items in cursor mode by retrying the same
+      // page when the last load failed. This flag is cleared on success.
+      this.retrySamePage = false;
       // Offset-based pagination fallback state
       // When cursor-based pagination is unavailable, we switch to offset mode
       // and track current offset and page size to continue infinite scrolling.
@@ -319,7 +322,7 @@
       // Setup intersection observer for infinite scroll
       this.lastRowObserver = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && !this.isLoading && this.hasMoreData) {
+          if (entry.isIntersecting && !this.isLoading && this.hasMoreData && !this.loadMoreError) {
             this.loadMore();
           }
         });
@@ -430,7 +433,7 @@
         }
 
         const hasSocialIcons = !!this.element.querySelector('[data-widget-package="com.fliplet.social-icons"]');
-        if(hasSocialIcons) {
+        if (hasSocialIcons) {
          await this.getGlobalSocialActionsDS();
          await this.getCachedSessionData();
         }
@@ -486,7 +489,7 @@
       const globalSocialActionsDSName = 'Global Data interactive icon';
 
       let globalSocialActionsDS = dataSources.find(el => el.name === globalSocialActionsDSName);
-      if(!globalSocialActionsDS) {
+      if (!globalSocialActionsDS) {
         try {
           globalSocialActionsDS = await Fliplet.DataSources.create({
             name: globalSocialActionsDSName,
@@ -651,12 +654,24 @@
           this.hasMoreData = newItems.length === this._pageSize;
           this.render();
         } else {
-          await this.rows.next().update({ keepExisting: true });
+          // Retry same page if previous attempt failed in cursor mode
+          if (this.retrySamePage) {
+            await this.rows.update({ keepExisting: true });
+          } else {
+            await this.rows.next().update({ keepExisting: true });
+          }
           this.hasMoreData = !this.rows.isLastPage;
+          // Clear the retry flag after a successful load
+          this.retrySamePage = false;
           this.render();
         }
       } catch (error) {
         this.loadMoreError = error;
+        // Set the retry flag only for cursor mode so the next attempt
+        // re-requests the same page instead of advancing.
+        if (!this._isOffsetMode) {
+          this.retrySamePage = true;
+        }
         console.error('[DATA LIST] Error loading more data', error);
       } finally {
         this.isLoading = false;
