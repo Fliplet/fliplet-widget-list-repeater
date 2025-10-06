@@ -580,8 +580,8 @@
               }
               this.hasMoreData = !this.rows.isLastPage;
 
-              if (this.rows.length && ['informed', 'live'].includes(this.data.updateType)) {
-                this.subscribe(this.rows);
+              if (['informed', 'live'].includes(this.data.updateType)) {
+                this.subscribe();
               }
             } else {
               // Subsequent updates (e.g. reloading same query) keep existing
