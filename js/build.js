@@ -390,7 +390,7 @@
           });
 
           // Merge hook results with base query
-          const query = hookResult.reduce((acc, curr) => {
+          const query = hookResult.reduce((acc = {}, curr = {}) => {
             return {
               ...acc,
               ...curr,
