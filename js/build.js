@@ -67,6 +67,7 @@
 
     render() {
       const rowElement = document.createElement('fl-list-repeater-row');
+
       rowElement.setAttribute('data-row-id', this.row.id);
       rowElement.setAttribute('data-key', this.key);
 
@@ -86,6 +87,7 @@
       if (!isInteract) {
         this.repeater.rowTemplatePaths.forEach((pathObject) => {
           const elements = rowElement.querySelectorAll(`[data-html-key="${pathObject.key}"]`);
+
           elements.forEach(el => {
             el.innerHTML = _.get(this.entry, pathObject.path) || '';
           });
@@ -97,6 +99,7 @@
       }
 
       this.element = rowElement;
+
       return rowElement;
     }
 
@@ -192,6 +195,7 @@
       if (this.viewContainer) {
         this.viewContainer.destroy();
       }
+
       Fliplet.Widget.destroyChildren(this.element);
       this.element.remove();
     }
@@ -265,6 +269,7 @@
 
       if (!this.parent) {
         Fliplet.UI.Toast('Please add this component inside a Data container');
+
         return Promise.reject('Data list must be placed inside a Data container');
       }
 
@@ -272,6 +277,7 @@
 
       if (!this.parent || !this.parent.connection) {
         Fliplet.UI.Toast('Please configure the Data container with a data source');
+
         return Promise.reject('Data container is not properly configured');
       }
 
@@ -313,6 +319,7 @@
             <p><small>${Fliplet.parseError(this.error)}</small></p>
           </div>
         `;
+
         return;
       }
 
@@ -333,10 +340,12 @@
       requestAnimationFrame(() => {
         const rowElements = this.element.querySelectorAll('fl-list-repeater-row');
         const allRowsEmpty = Array.from(rowElements).every(row => row.children.length === 0);
+
         if (!isInteract && (rowElements.length === 0 || allRowsEmpty)) {
           this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
         }
-        return
+
+        return;
       });
 
       // Only render new rows
@@ -346,6 +355,7 @@
       // Render new rows
       newRows.forEach((row, index) => {
         const rowComponent = new ListRepeaterRow(this, row, startIndex + index);
+
         this.rowComponents.push(rowComponent);
         this.element.appendChild(rowComponent.element);
       });
@@ -384,7 +394,8 @@
             return {
               ...acc,
               ...curr,
-              where: { ...acc.where, ...curr.where },
+              where: curr.where || acc.where,
+              join: curr.join || acc.join,
               order: curr.order || acc.order
             };
           }, baseQuery);
@@ -487,8 +498,10 @@
         if (index === 0) {
           rowComponent.element.style.padding = '0';
           rowComponent.element.style.textAlign = 'left';
+
           return;
         }
+
         rowComponent.render();
       });
     }
@@ -516,6 +529,7 @@
 
         if (insertedIndex !== -1) {
           this.pendingUpdates.inserted.splice(insertedIndex, 1);
+
           return;
         }
 
@@ -647,7 +661,9 @@
 
   Fliplet.Widget.instance('list-repeater', function(data) {
     const repeater = new ListRepeater(this, data);
+
     listRepeaterInstances[data.id] = repeater;
+
     return repeater;
   }, {
     supportsDynamicContext: true
