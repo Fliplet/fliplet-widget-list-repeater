@@ -87,7 +87,7 @@
         this.repeater.rowTemplatePaths.forEach((pathObject) => {
           const elements = rowElement.querySelectorAll(`[data-html-key="${pathObject.key}"]`);
           elements.forEach(el => {
-            el.innerHTML = _.get(this.entry, pathObject.path) || '';
+            el.innerHTML = Fliplet.Utils.get(this.entry, pathObject.path) || '';
           });
         });
       }
@@ -161,7 +161,7 @@
     }
 
     onChangeDetected() {
-      _.debounce(() => {
+      Fliplet.Utils.debounce(() => {
         const rowElement = this.element.cloneNode(true);
         const widgetInstances = rowElement.querySelectorAll('[data-fl-widget-instance]');
         const placeholder = this.element.querySelector('[data-view-placeholder]');
@@ -287,11 +287,11 @@
 
       rowTemplate.find('fl-prop[data-path]').each((i, el) => {
         const path = normalizePath(el.getAttribute('data-path'));
-        let pathObject = _.get(this.testDataObject, path);
+        let pathObject = Fliplet.Utils.get(this.testDataObject, path);
 
         if (!pathObject) {
           pathObject = { path, key: getHtmlKeyFromPath(path) };
-          _.set(this.testDataObject, path, pathObject);
+          Fliplet.Utils.set(this.testDataObject, path, pathObject);
           this.rowTemplatePaths.push(pathObject);
         }
 
@@ -624,7 +624,7 @@
     }
 
     getProfileValue(key) {
-      return _.get(Fliplet.Session.get('user'), key);
+      return Fliplet.Utils.get(Fliplet.Session.get('user'), key);
     }
 
     getSortOrder() {
@@ -661,13 +661,13 @@
     options = options || { ts: 10 };
 
     return Fliplet().then(function() {
-      return Promise.all(_.values(listRepeaterInstances)).then(function(repeaters) {
+      return Promise.all(Fliplet.Utils.values(listRepeaterInstances)).then(function(repeaters) {
         let repeater;
 
         if (typeof filter === 'undefined') {
           repeater = repeaters.length ? repeaters[0] : undefined;
         } else {
-          repeater = _.find(repeaters, filter);
+          repeater = Fliplet.Utils.find(repeaters, filter);
         }
 
         if (!repeater) {
@@ -694,12 +694,12 @@
     }
 
     return Fliplet().then(function() {
-      return Promise.all(_.values(listRepeaterInstances)).then(function(repeaters) {
+      return Promise.all(Fliplet.Utils.values(listRepeaterInstances)).then(function(repeaters) {
         if (typeof filter === 'undefined') {
           return repeaters;
         }
 
-        return _.filter(repeaters, filter);
+        return Fliplet.Utils.filter(repeaters, filter);
       });
     });
   };
