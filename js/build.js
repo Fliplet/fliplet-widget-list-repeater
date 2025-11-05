@@ -26,6 +26,61 @@
       { id: 3, data: {}, updatedAt: now }
     ]
     : undefined;
+  const columnsForSocialDataSource = [
+    'Email', 'Data Source Id', 'Data Source Entry Id', 'Datetime', 'Type', 'Device Uuid'
+  ];
+  const accessRulesObj = {
+    accessRulesBookmarks: [
+      { 'type': ['insert'], 'allow': 'all', 'enabled': true,
+        'require': [
+          { 'Type': { 'equals': 'Bookmark' } }
+        ]
+      },
+      { 'type': ['delete'], 'allow': 'loggedIn', 'enabled': true,
+        'require': [
+          { 'Type': { 'equals': 'Bookmark' } },
+          { 'Email': { 'equals': '{{user.[Email]}}' } }
+        ]
+      },
+      { 'type': ['delete'], 'allow': 'all', 'enabled': true,
+        'require': [
+          { 'Type': { 'equals': 'Bookmark' } },
+          { 'Device Uuid': { 'equals': '{{session.uuid}}' } }
+        ]
+      },
+      { 'type': ['select'], 'allow': 'all', 'enabled': true, 'require': [
+        { 'Type': { 'equals': 'Bookmark' } },
+        { 'Email': { 'equals': '{{user.[Email]}}' } }
+      ]
+      },
+      // TODO remove this condition when we agree on the security rules
+      { 'type': ['select'], 'allow': 'all', 'enabled': true },
+      { 'type': ['select'], 'allow': 'all', 'enabled': true,
+        'require': [
+          { 'Type': { 'equals': 'Bookmark' } },
+          { 'Device Uuid': { 'equals': '{{session.uuid}}' } }
+        ]
+      }
+    ],
+    accessRulesLikes: [
+      { 'type': ['insert'], 'allow': 'loggedIn', 'enabled': true,
+        'require': [
+          { 'Type': { 'equals': 'Like' } }
+        ]
+      },
+      { 'type': ['delete'], 'allow': 'loggedIn', 'enabled': true,
+        'require': [
+          { 'Type': { 'equals': 'Like' } },
+          { 'Email': { 'equals': '{{user.[Email]}}' } }
+        ]
+      },
+      { 'type': ['select'], 'allow': 'loggedIn', 'enabled': true,
+        'require': [
+          { 'Type': { 'equals': 'Like' } }
+        ]
+      }
+    ]
+  };
 
   function getHtmlKeyFromPath(path) {
     return `data${CryptoJS.MD5(path).toString().substr(-6)}`;
@@ -330,13 +385,18 @@
         return;
       }
 
-      requestAnimationFrame(() => {
+      requestAnimationFrame(async() => {
         const rowElements = this.element.querySelectorAll('fl-list-repeater-row');
         const allRowsEmpty = Array.from(rowElements).every(row => row.children.length === 0);
         if (!isInteract && (rowElements.length === 0 || allRowsEmpty)) {
           this.element.innerHTML = `<p class="text-center">${this.noDataTemplate}</p>`;
         }
-        return
+
+        const hasSocialIcons = !!this.element.querySelector('[data-widget-package="com.fliplet.social-icons"]');
+        if(hasSocialIcons) {
+         await this.getGlobalSocialActionsDS();
+         await this.getCachedSessionData();
+        }
       });
 
       // Only render new rows
@@ -353,6 +413,73 @@
       // Make sure loading indicator is always at the bottom
       if (this.loadingIndicator) {
         this.element.appendChild(this.loadingIndicator);
+      }
+    }
+
+    async getGlobalSocialActionsDS() {
+      const appId = Fliplet.Env.get('appId');
+      let dataSources = [];
+      try {
+        dataSources = await Fliplet.DataSources.get({
+          attributes: ['id', 'name', 'appId'],
+          where: { appId },
+        });
+      } catch (error) {
+        console.error('[ListRepeater] Failed to get data sources', error);
+        dataSources = [];
+      }
+
+      const accessRules = [...accessRulesObj.accessRulesBookmarks, ...accessRulesObj.accessRulesLikes];
+      const globalSocialActionsDSName = 'Global Data interactive icon';
+
+      let globalSocialActionsDS = dataSources.find(el => el.name === globalSocialActionsDSName);
+      if(!globalSocialActionsDS) {
+        try {
+          globalSocialActionsDS = await Fliplet.DataSources.create({
+            name: globalSocialActionsDSName,
+            appId,
+            columns: columnsForSocialDataSource,
+            accessRules
+          });
+        } catch (error) {
+          console.error('[ListRepeater] Failed to create Social Actions data source', error);
+          return;
+        }
+      }
+      this.globalSocialActionsDSId = globalSocialActionsDS.id;
+
+      let globalSocialActionsDSConnection;
+      try {
+        globalSocialActionsDSConnection = await Fliplet.DataSources.connect(globalSocialActionsDS.id);
+      } catch (error) {
+        console.error('[ListRepeater] Failed to connect to Social Actions data source', error);
+        return;
+      }
+
+      const where = {
+        'Data Source Id': this.rows.length && this.rows[0].dataSourceId,
+      };
+
+     let globalSocialActionsDSData = [];
+     try {
+       globalSocialActionsDSData = await globalSocialActionsDSConnection.find({
+          where
+        });
+     } catch (error) {
+       console.error('[ListRepeater] Failed to fetch Social Actions data source entries', error);
+       globalSocialActionsDSData = [];
+     }
+
+      this.globalSocialActionsDS = globalSocialActionsDSData;
+    }
+
+    async getCachedSessionData() {
+      try {
+        const cachedSessionData = await Fliplet.User.getCachedSession();
+        this.cachedSessionData = cachedSessionData;
+      } catch (error) {
+        console.error('[ListRepeater] Failed to get cached session data', error);
+        this.cachedSessionData = undefined;
       }
     }
 
@@ -405,7 +532,6 @@
             this.subscribe();
           }
         }
-
         this.render();
 
         await Fliplet.Hooks.run('repeaterDataRetrieved', {
