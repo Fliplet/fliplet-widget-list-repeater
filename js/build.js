@@ -115,6 +115,7 @@
         'data-view': this.isEditableRow ? 'content' : undefined,
         'data-node-name': this.isEditableRow ? 'Content' : undefined
       };
+      this.cursorJustCreated = true;
 
       this.render();
       this.setupEventListeners();
@@ -178,8 +179,9 @@
         });
       }
 
-      // Observe when the last row element is in view
-      if (this.element?.nodeType === Node.ELEMENT_NODE && this.index === this.repeater.rows.length - 1) {
+      // Observe when the second-to-last row element is in view
+      const triggerIndex = Math.max(0, this.repeater.rows.length - 2);
+      if (this.element?.nodeType === Node.ELEMENT_NODE && this.index === triggerIndex) {
         this.repeater.lastRowObserver.observe(this.element);
       }
 
@@ -275,10 +277,28 @@
       this.parent = undefined;
       this.rowTemplatePaths = [];
       this.testDataObject = {};
-      this.pageSize = 10; // Initial page size
-      this.currentOffset = 0;
       this.hasMoreData = true;
       this.loadingIndicator = null;
+      this.errorIndicator = null;
+      this.loadMoreError = undefined;
+      // Ensure retries do not skip items in cursor mode by retrying the same
+      // page when the last load failed. This flag is cleared on success.
+      this.retrySamePage = false;
+      // Offset-based pagination fallback state
+      // When cursor-based pagination is unavailable, we switch to offset mode
+      // and track current offset and page size to continue infinite scrolling.
+      this._isOffsetMode = false;
+      this._offset = 0;
+      this._pageSize = data.pageSize || 10;
+      this._lastQuery = undefined;
+      // When custom code calls loadData, this flag prevents non-custom loads
+      // (e.g. the initial load from init) from overriding custom results.
+      this.customOverrideActive = false;
+      // Persist active filters and sorts provided by custom code and search widget
+      this.activeCustomFilters = undefined;
+      this.activeSearchFilters = undefined;
+      this.activeCustomSort = undefined;
+      this.activeSearchSort = undefined;
 
       this.element.classList.add(this.direction);
 
@@ -288,10 +308,30 @@
       this.loadingIndicator.innerHTML = '<p class="text-center"><i class="fa fa-refresh fa-spin fa-fw"></i> Loading more...</p>';
       this.element.appendChild(this.loadingIndicator);
 
+      // Create inline error indicator for load-more failures
+      this.errorIndicator = document.createElement('div');
+      this.errorIndicator.className = 'list-repeater-error hidden';
+      this.errorIndicator.innerHTML = '<p class="text-center">Couldn\u2019t load more. <a href="#" data-retry>Retry</a></p>';
+      this.element.appendChild(this.errorIndicator);
+
+      // Retry handler
+      this.errorIndicator.addEventListener('click', (event) => {
+        const target = event.target;
+        if (target && target.matches('a[data-retry]')) {
+          event.preventDefault();
+          if (this.isLoading) {
+            return;
+          }
+          this.loadMoreError = undefined;
+          this.render();
+          this.loadMore();
+        }
+      });
+
       // Setup intersection observer for infinite scroll
       this.lastRowObserver = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && !this.isLoading && this.hasMoreData) {
+          if (entry.isIntersecting && !this.isLoading && this.hasMoreData && !this.loadMoreError) {
             this.loadMore();
           }
         });
@@ -380,6 +420,15 @@
         }
       }
 
+      // Show inline error for load-more failures
+      if (this.errorIndicator) {
+        if (!this.isLoading && this.loadMoreError) {
+          this.errorIndicator.classList.remove('hidden');
+        } else {
+          this.errorIndicator.classList.add('hidden');
+        }
+      }
+
       // For initial load with no data yet, just show the loader
       if (!this.rows) {
         return;
@@ -393,11 +442,16 @@
         }
 
         const hasSocialIcons = !!this.element.querySelector('[data-widget-package="com.fliplet.social-icons"]');
-        if(hasSocialIcons) {
+        if (hasSocialIcons) {
          await this.getGlobalSocialActionsDS();
          await this.getCachedSessionData();
         }
       });
+
+      // Disconnect previous observers for second-to-last elements before rendering
+      if (this.lastRowObserver) {
+        this.lastRowObserver.disconnect();
+      }
 
       // Only render new rows
       const startIndex = this.rowComponents.length;
@@ -413,6 +467,17 @@
       // Make sure loading indicator is always at the bottom
       if (this.loadingIndicator) {
         this.element.appendChild(this.loadingIndicator);
+      }
+
+      // Ensure error indicator sits at the bottom as well
+      if (this.errorIndicator) {
+        this.element.appendChild(this.errorIndicator);
+      }
+
+      // After rendering new rows, re-establish observer on new second-to-last element
+      const triggerIndex = Math.max(0, this.rowComponents.length - 2);
+      if (this.rowComponents[triggerIndex]?.element) {
+        this.lastRowObserver.observe(this.rowComponents[triggerIndex].element);
       }
     }
 
@@ -433,7 +498,7 @@
       const globalSocialActionsDSName = 'Global Data interactive icon';
 
       let globalSocialActionsDS = dataSources.find(el => el.name === globalSocialActionsDSName);
-      if(!globalSocialActionsDS) {
+      if (!globalSocialActionsDS) {
         try {
           globalSocialActionsDS = await Fliplet.DataSources.create({
             name: globalSocialActionsDSName,
@@ -483,22 +548,38 @@
       }
     }
 
-    async loadData() {
+    async loadData({ additionalFilters, customSortOrder, isCustomCodeTriggered, isSearchTriggered } = {}) {
+      if (isCustomCodeTriggered) {
+        this.activeCustomFilters = additionalFilters;
+        if (customSortOrder) {
+          this.activeCustomSort = customSortOrder;
+        }
+      }
+      if (isSearchTriggered) {
+        this.activeSearchFilters = additionalFilters;
+        if (customSortOrder) {
+          this.activeSearchSort = customSortOrder;
+        }
+      }
+
+      if (isCustomCodeTriggered || isSearchTriggered) {
+        this.customOverrideActive = true;
+      }
       this.isLoading = true;
       this.render();
 
       try {
         if (isInteract) {
           this.rows = sampleData;
+          this.hasMoreData = false;
         } else if (this.parent && typeof this.parent.connection === 'function') {
           this.connection = await this.parent.connection();
 
           const baseQuery = {
-            where: this.getFilterQuery(),
-            order: this.getSortOrder(),
-            limit: this.pageSize,
-            offset: this.currentOffset,
-            includePagination: true
+            where: this.getFilterQuery(additionalFilters, isCustomCodeTriggered, isSearchTriggered),
+            // Sort priority: explicit call > active search sort > active custom sort > widget defaults
+            order: customSortOrder || this.activeSearchSort || this.activeCustomSort || this.getSortOrder(),
+            limit: this.data.pageSize || 10
           };
 
           const hookResult = await Fliplet.Hooks.run('repeaterBeforeRetrieveData', {
@@ -516,20 +597,72 @@
             };
           }, baseQuery);
 
-          const response = await this.connection.find(query);
-
-          // Handle paginated response
-          if (response.entries) {
-            this.rows = this.rows || [];
-            this.rows.push(...response.entries);
-            this.hasMoreData = response.entries.length === this.pageSize;
-          } else {
-            this.rows = response;
-            this.hasMoreData = response.length === this.pageSize;
+          // If a user-initiated override (custom/search) has started, avoid applying any non-custom loads
+          if (!isCustomCodeTriggered && !isSearchTriggered && this.customOverrideActive) {
+            return;
           }
+          try {
+            // Initialize or update cursor-based pagination
+            if (!this.rows || additionalFilters || customSortOrder) {
+              // Initial load - create cursor
+              const cursor = await this.connection.findWithCursor(query);
+              // Guard again after awaiting network call in case custom load started meanwhile
+              if (!isCustomCodeTriggered && !isSearchTriggered && this.customOverrideActive) {
+                return;
+              }
+              this.rows = cursor;
+              if (!this.rows || typeof this.rows.next !== 'function') {
+                throw new Error('Failed to create data cursor');
+              }
+              this.hasMoreData = !this.rows.isLastPage;
 
-          if (this.rows.length && ['informed', 'live'].includes(this.data.updateType)) {
-            this.subscribe();
+              if (['informed', 'live'].includes(this.data.updateType)) {
+                this.subscribe();
+              }
+
+              this.cursorJustCreated = true;
+              if (additionalFilters || customSortOrder) {
+                this.rowComponents.forEach(component => component.destroy());
+                this.rowComponents = [];
+                this.element.innerHTML = '';
+              }
+            }
+
+            if ((additionalFilters || this.rows) && !this.cursorJustCreated) {
+              if (!isCustomCodeTriggered && !isSearchTriggered && this.customOverrideActive) {
+                return;
+              }
+              // Subsequent updates (e.g. reloading same query) keep existing
+              await this.rows.update({ keepExisting: true });
+              this.hasMoreData = !this.rows.isLastPage;
+            }
+
+            this.cursorJustCreated = false;
+
+          } catch (error) {
+            // Fallback to offset-based pagination if cursor fails
+            console.warn('Cursor-based pagination failed, falling back to offset-based', error);
+            // Implement fallback logic
+            try {
+              // Enable offset mode and remember the last query without limit/offset changes
+              this._isOffsetMode = true;
+              this._lastQuery = { ...query };
+
+              // Initial fetch with classic find using offset/limit
+              const offsetQuery = { ...this._lastQuery, limit: this._pageSize, offset: 0 };
+              const results = await this.connection.find(offsetQuery);
+              if (!isCustomCodeTriggered && !isSearchTriggered && this.customOverrideActive) {
+                return;
+              }
+
+              this.rows = Array.isArray(results) ? results : [];
+              this._offset = this.rows.length;
+              this.hasMoreData = this.rows.length === this._pageSize;
+            } catch (fallbackError) {
+              // If fallback also fails, surface original error context
+              console.error('[ListRepeater] Offset-based fallback failed', fallbackError);
+              throw fallbackError;
+            }
           }
         }
         this.render();
@@ -555,12 +688,49 @@
     }
 
     async loadMore() {
-      if (this.isLoading || !this.hasMoreData) {
+      if (this.isLoading || !this.hasMoreData || !this.rows) {
         return;
       }
 
-      this.currentOffset += this.pageSize;
-      await this.loadData();
+      this.isLoading = true;
+      this.loadMoreError = undefined;
+      this.render();
+
+      try {
+        if (this._isOffsetMode) {
+          // Offset-based pagination: request next page using stored query
+          const nextQuery = { ...this._lastQuery, limit: this._pageSize, offset: this._offset };
+          const nextResults = await this.connection.find(nextQuery);
+
+          const newItems = Array.isArray(nextResults) ? nextResults : [];
+          this.rows.push(...newItems);
+          this._offset += newItems.length;
+          this.hasMoreData = newItems.length === this._pageSize;
+          this.render();
+        } else {
+          // Retry same page if previous attempt failed in cursor mode
+          if (this.retrySamePage) {
+            await this.rows.update({ keepExisting: true });
+          } else {
+            await this.rows.next().update({ keepExisting: true });
+          }
+          this.hasMoreData = !this.rows.isLastPage;
+          // Clear the retry flag after a successful load
+          this.retrySamePage = false;
+          this.render();
+        }
+      } catch (error) {
+        this.loadMoreError = error;
+        // Set the retry flag only for cursor mode so the next attempt
+        // re-requests the same page instead of advancing.
+        if (!this._isOffsetMode) {
+          this.retrySamePage = true;
+        }
+        console.error('[DATA LIST] Error loading more data', error);
+      } finally {
+        this.isLoading = false;
+        this.render();
+      }
     }
 
     subscribe(cursor) {
@@ -698,7 +868,21 @@
       return Object.values(this.pendingUpdates).some(value => value.length);
     }
 
-    getFilterQuery() {
+    /**
+     * Build the final where clause combining:
+     * - Default widget filters
+     * - Persisted custom filters (from custom code)
+     * - Persisted search filters (from search widget)
+     * - Any ad-hoc additional filters passed by callers without flags
+     *
+     * The goal is to layer filters so user-driven filters never get lost.
+     *
+     * @param {Object} additionalFilters Optional transient filters (non-flagged callers)
+     * @param {boolean} isCustomCodeTriggered Whether the call originates from custom code
+     * @param {boolean} isSearchTriggered Whether the call originates from the search widget
+     * @returns {Object} where clause for queries
+     */
+    getFilterQuery(additionalFilters, isCustomCodeTriggered, isSearchTriggered) {
       const filters = this.data.filters || [];
       const query = {};
 
@@ -746,7 +930,22 @@
         }
       });
 
-      return query;
+      const finalFilters = { $and: [query] };
+
+      // Always include any persisted custom/search filters so they carry across loads
+      if (this.activeCustomFilters) {
+        finalFilters.$and.push(this.activeCustomFilters);
+      }
+      if (this.activeSearchFilters) {
+        finalFilters.$and.push(this.activeSearchFilters);
+      }
+
+      // Allow non-flagged callers to add extra transient filters
+      if (additionalFilters && !isCustomCodeTriggered && !isSearchTriggered) {
+        finalFilters.$and.push(additionalFilters);
+      }
+
+      return finalFilters;
     }
 
     getProfileValue(key) {
