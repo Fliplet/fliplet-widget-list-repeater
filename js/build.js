@@ -358,14 +358,19 @@
         filter: { package: 'com.fliplet.dynamic-container' }
       });
 
-      if (!this.parent) {
+      if (!this.parent && !isInteract) {
         Fliplet.UI.Toast('Please add this component inside a Data container');
         return Promise.reject('Data list must be placed inside a Data container');
       }
 
-      this.parent = await Fliplet.DynamicContainer.get(this.parent.id);
+      if (this.parent) {
+        this.parent = await Fliplet.DynamicContainer.get(this.parent.id);
+      } else {
+        // No parent but we're in Interact: proceed with placeholder data
+        this.parent = null;
+      }
 
-      if (!this.parent || !this.parent.connection) {
+      if ((!this.parent || !this.parent.connection) && !isInteract) {
         Fliplet.UI.Toast('Please configure the Data container with a data source');
         return Promise.reject('Data container is not properly configured');
       }
