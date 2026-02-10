@@ -14,11 +14,11 @@
     "hideThemeSettings": true
   },
   "interface": {
-    "dependencies": ["fliplet-datasources"],
+    "dependencies": ["fliplet-datasources", "lodash"],
     "assets": ["js/interface.js"]
   },
   "build": {
-    "dependencies": ["vue.js", "fliplet-core"],
+    "dependencies": ["vue.js", "fliplet-core", "lodash"],
     "assets": ["css/build.css", "js/build.js"]
   }
 }
