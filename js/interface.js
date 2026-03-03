@@ -15,7 +15,7 @@ async function getDataSourceColumns() {
 
   const dataSource = await Fliplet.DataSources.getById(dynamicContainer.dataSourceId, { attributes: ['columns'] });
 
-  return dataSource && _.orderBy(dataSource.columns, column => column.toLowerCase()) || [];
+  return dataSource && Fliplet.Utils.orderBy(dataSource.columns, column => column.toLowerCase()) || [];
 }
 
 function toggleFilterField(filter, fieldName, value, compareValue) {
@@ -225,7 +225,7 @@ function toggleFilterField(filter, fieldName, value, compareValue) {
         name: 'clickAction',
         package: 'com.fliplet.link',
         data: function(value) {
-          return _.assign({}, value, {
+          return Fliplet.Utils.assign({}, value, {
             options: {
               actionLabel: 'Click action'
             }
