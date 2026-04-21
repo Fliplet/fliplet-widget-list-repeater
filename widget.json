@@ -7,7 +7,7 @@
   "tags": ["type:component", "category:layout", "beta:true"],
   "provider_only": false,
   "html_tag": "div",
-  "references": ["content:richContent"],
+  "references": ["content:richContent", "clickAction.page:page"],
   "settings": {
     "interfaceWidgetPackage": "com.fliplet.helper-configuration",
     "asyncRendering": true,
